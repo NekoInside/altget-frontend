@@ -1,0 +1,731 @@
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { useAuthStore } from '@/store/auth'
+import type { UserInfo, ApiKeyInfo, PasskeyItem, CoinBalance, CoinTransaction } from '@/types/api'
+import { getUserInfo, getCoinBalance, getCoinHistory, redeemToken as redeemTokenAPI, transferCoins } from '@/api/user'
+import { getApiKeyInfo, generateNewApiKey } from '@/api/apikey'
+import { listPasskeys, deletePasskey, getPasskeyRegisterOptions, verifyPasskeyRegister } from '@/api/misc'
+import { parseRegistrationCreationOptions, serializeRegistrationCredential } from '@/utils/webauthn'
+import { Navigate } from 'react-router-dom'
+import './Profile.css'
+
+type UserInfoDef = UserInfo
+
+export default function Profile() {
+  const { user, setUser } = useAuthStore()
+  const [tab, setTab] = useState<'overview' | 'coins' | 'apikey' | 'security'>('overview')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getUserInfo().then(r => {
+      if (r.code === 0) setUser(r.data)
+    }).finally(() => setLoading(false))
+  }, [])
+
+  if (!user && !loading) return <Navigate to="/login" replace />
+  if (loading) return (
+    <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span className="spinner" style={{ width: 28, height: 28 }} />
+    </div>
+  )
+
+  const roleLabel = (role?: number) => {
+    if (role === 0) return { label: 'Admin', cls: 'badge-yellow' }
+    if (role === 1) return { label: '待验证', cls: 'badge-yellow' }
+    if (role === 3) return { label: '已封禁', cls: 'badge-red' }
+    return { label: '已验证', cls: 'badge-green' }
+  }
+
+  const rl = roleLabel(user?.role as number | undefined)
+
+  const TABS = [
+    { key: 'overview', label: '概览' },
+    { key: 'coins', label: '钱包' },
+    { key: 'apikey', label: 'API Key' },
+    { key: 'security', label: '安全' },
+  ] as const
+
+  return (
+    <div className="page profile-page">
+      <div className="container profile-shell">
+        {/* Profile header */}
+        <motion.div
+          className="profile-header"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="profile-avatar">
+            {user?.username?.[0]?.toUpperCase() ?? '?'}
+          </div>
+          <div className="profile-identity">
+            <h1 className="profile-name">{user?.username}</h1>
+            <div className="profile-meta">
+              <span className={`badge ${rl.cls}`}>{rl.label}</span>
+              <span className="profile-email mono">{user?.email}</span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Tabs */}
+        <div className="profile-tabs">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              className={`profile-tab ${tab === t.key ? 'profile-tab--active' : ''}`}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+              {tab === t.key && <motion.span className="profile-tab-bar" layoutId="ptab" />}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div className="profile-content">
+          {tab === 'overview' && <OverviewTab user={user!} />}
+          {tab === 'coins' && <CoinsTab user={user!} />}
+          {tab === 'apikey' && <ApiKeyTab />}
+          {tab === 'security' && <SecurityTab user={user!} />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Overview tab ─────────────────────────────────────────── */
+function OverviewTab({ user }: { user: UserInfoDef }) {
+  const socialLinks = [
+    { key: 'github', bound: user.githubBound, label: 'GitHub', href: '/api/user/bind-github', icon: '⌥' },
+    { key: 'discord', bound: user.discordBound, label: 'Discord', href: '/api/discord/bind', icon: '◈' },
+    { key: 'telegram', bound: user.telegramBound, label: 'Telegram', href: '/api/user/bind-tg', icon: '✈' },
+  ]
+
+  return (
+    <motion.div
+      className="tab-pane anim-fade-up"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+    >
+      <div className="info-grid">
+        <InfoRow label="用户名" value={user.username} mono />
+        <InfoRow label="邮箱" value={user.email} mono />
+        <InfoRow label="注册时间" value={user.registerTime?.split('T')[0]} />
+        <InfoRow label="最近使用" value={user.lastUseTime ? user.lastUseTime.split('T')[0] : '从未'} />
+      </div>
+
+      <hr className="divider" />
+
+      <h3 className="section-title">已绑定账号</h3>
+      <div className="social-bindings">
+        {socialLinks.map(s => (
+          <div key={s.key} className={`social-binding ${s.bound ? 'social-binding--bound' : ''}`}>
+            <span className="social-binding-icon">{s.icon}</span>
+            <div>
+              <div className="social-binding-name">{s.label}</div>
+              <div className="social-binding-status">{s.bound ? '已绑定' : '未绑定'}</div>
+            </div>
+            {!s.bound && (
+              <a href={s.href} className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }}>
+                绑定
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
+/* ─── API Key tab ──────────────────────────────────────────── */
+function ApiKeyTab() {
+  const [info, setInfo] = useState<ApiKeyInfo | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [genLoading, setGenLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    getApiKeyInfo().then(r => {
+      if (r.code === 0) setInfo(r.data)
+    }).finally(() => setLoading(false))
+  }, [])
+
+  const copy = async () => {
+    if (!info?.key) return
+    await navigator.clipboard.writeText(info.key)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1800)
+  }
+
+  const regen = async () => {
+    setErr(null)
+    setGenLoading(true)
+    try {
+      // PoW + Captcha required
+      const res = await generateNewApiKey({
+        powId: 'demo', nonce: 'demo',
+        captchaId: '', captchaOutput: '', genTime: '', lotNumber: '', passToken: '',
+      })
+      if (res.code === 0) {
+        setInfo(prev => prev ? { ...prev, key: res.data! } : null)
+      } else {
+        setErr(res.msg)
+      }
+    } catch {
+      setErr('请求失败')
+    } finally {
+      setGenLoading(false)
+    }
+  }
+
+  if (loading) return <div className="tab-loading"><span className="spinner" /></div>
+
+  return (
+    <motion.div className="tab-pane" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <h3 className="section-title">API Key 管理</h3>
+
+      {info ? (
+        <>
+          <div className="key-display">
+            <code className="mono key-value">{info.key}</code>
+            <button className="copy-btn" onClick={copy}>{copied ? '✓' : '⎘'}</button>
+          </div>
+          <div className="key-stats">
+            <KeyStat label="今日使用" value={info.dailyUsage} />
+            <KeyStat label="权限等级" value={`Level ${info.userTier}`} />
+          </div>
+        </>
+      ) : (
+        <div className="alert alert-info">暂无 API Key，点击下方按钮生成。</div>
+      )}
+
+      {err && <div className="alert alert-error"><span>✕</span><span>{err}</span></div>}
+
+      <div className="alert alert-warn" style={{ marginTop: '0.75rem' }}>
+        <span>⚠️</span>
+        <span>重新生成将立即使旧 Key 失效。</span>
+      </div>
+
+      <button className="btn btn-primary" onClick={regen} disabled={genLoading} style={{ marginTop: '1rem' }}>
+        {genLoading ? <><span className="spinner" /> 生成中…</> : info ? '重新生成 Key' : '生成 API Key'}
+      </button>
+
+      <hr className="divider" />
+      <h4 className="section-subtitle">使用说明</h4>
+      <div className="code-block">
+        <pre className="mono">{`GET /api/uf/get\nHeader: x-ciallo: {你的 API Key}\n\nGET /api/uf/paid-get?amount=数量\nHeader: x-ciallo: {你的 API Key}`}</pre>
+      </div>
+      <p className="section-desc">返回格式：<code className="mono">username----password</code></p>
+    </motion.div>
+  )
+}
+
+function KeyStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="key-stat">
+      <span className="key-stat-val mono">{value}</span>
+      <span className="key-stat-key">{label}</span>
+    </div>
+  )
+}
+
+/* ─── Coins tab ────────────────────────────────────────────── */
+function CoinsTab({ user }: { user: UserInfo }) {
+  const HISTORY_PAGE_SIZE_OPTIONS = [10, 20, 50] as const
+
+  const [balance, setBalance] = useState<number>(user.coinBalance ?? 0)
+  const [history, setHistory] = useState<CoinTransaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  // Redeem Tab
+  const [redeemToken, setRedeemToken] = useState('')
+  const [redeeming, setRedeeming] = useState(false)
+
+  // Transfer Tab
+  const [recipient, setRecipient] = useState('')
+  const [transferAmount, setTransferAmount] = useState('')
+  const [transferring, setTransferring] = useState(false)
+
+  // View Tab
+  const [viewTab, setViewTab] = useState<'balance' | 'redeem' | 'transfer' | 'history'>('balance')
+  const [historyPage, setHistoryPage] = useState(1)
+  const [historyPageSize, setHistoryPageSize] = useState<number>(10)
+  const [historyTotalPages, setHistoryTotalPages] = useState(1)
+  const [historyJumpInput, setHistoryJumpInput] = useState('')
+
+  const loadData = async (targetPage = historyPage, size = historyPageSize) => {
+    setLoading(true)
+    try {
+      const [balRes, histRes] = await Promise.all([
+        getCoinBalance(),
+        getCoinHistory(targetPage, size),
+      ])
+      if (balRes.code === 0) {
+        setBalance(balRes.data.balance)
+      }
+      if (histRes.code === 0) {
+        const nextTotalPages = Math.max(1, Number(histRes.data?.pages ?? 1))
+        if (targetPage > nextTotalPages) {
+          setHistoryPage(nextTotalPages)
+          return
+        }
+        setHistory(histRes.data?.transactions ?? [])
+        setHistoryTotalPages(nextTotalPages)
+      } else {
+        setHistory([])
+        setHistoryTotalPages(1)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData(historyPage, historyPageSize)
+  }, [historyPage, historyPageSize])
+
+  const handleRedeem = async () => {
+    if (!redeemToken.trim()) {
+      setMsg({ type: 'err', text: '请输入兑换码' })
+      return
+    }
+
+    setRedeeming(true)
+    setMsg(null)
+    try {
+      const res = await redeemTokenAPI(redeemToken.trim())
+      if (res.code === 0) {
+        setBalance(res.data.balance)
+        setRedeemToken('')
+        setMsg({ type: 'ok', text: `兑换成功！获得 ${res.data.balance - balance} coins` })
+        await loadData()
+      } else {
+        setMsg({ type: 'err', text: res.msg || '兑换失败' })
+      }
+    } catch (e) {
+      setMsg({ type: 'err', text: '兑换请求失败' })
+    } finally {
+      setRedeeming(false)
+    }
+  }
+
+  const handleTransfer = async () => {
+    if (!recipient.trim()) {
+      setMsg({ type: 'err', text: '请输入收款人用户名' })
+      return
+    }
+    if (!transferAmount || isNaN(parseInt(transferAmount))) {
+      setMsg({ type: 'err', text: '请输入有效的转账数量' })
+      return
+    }
+    const amount = parseInt(transferAmount)
+    if (amount <= 0) {
+      setMsg({ type: 'err', text: '转账数量必须大于 0' })
+      return
+    }
+    if (amount > balance) {
+      setMsg({ type: 'err', text: '余额不足' })
+      return
+    }
+
+    setTransferring(true)
+    setMsg(null)
+    try {
+      const res = await transferCoins(recipient.trim(), amount)
+      if (res.code === 0) {
+        setBalance(res.data.balance)
+        setRecipient('')
+        setTransferAmount('')
+        setMsg({ type: 'ok', text: `转账成功！已向 ${recipient} 转账 ${amount} coins` })
+        await loadData()
+      } else {
+        setMsg({ type: 'err', text: res.msg || '转账失败' })
+      }
+    } catch (e) {
+      setMsg({ type: 'err', text: '转账请求失败' })
+    } finally {
+      setTransferring(false)
+    }
+  }
+
+  const VIEW_TABS = [
+    { key: 'balance', label: '余额' },
+    { key: 'redeem', label: '兑换' },
+    { key: 'transfer', label: '转账' },
+    { key: 'history', label: '历史' },
+  ] as const
+
+  const handleHistoryPageSizeChange = (nextSize: number) => {
+    setHistoryPageSize(nextSize)
+    setHistoryPage(1)
+    setHistoryJumpInput('')
+  }
+
+  const handleHistoryJump = (e: React.FormEvent) => {
+    e.preventDefault()
+    const target = parseInt(historyJumpInput, 10)
+    if (!Number.isFinite(target)) return
+    setHistoryPage(Math.max(1, Math.min(historyTotalPages, target)))
+    setHistoryJumpInput('')
+  }
+
+  return (
+    <motion.div className="tab-pane" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      {/* Message */}
+      {msg && (
+        <div className={`alert ${msg.type === 'ok' ? 'alert-success' : 'alert-error'}`} style={{ marginBottom: '0.85rem' }}>
+          <span>{msg.type === 'ok' ? '✓' : '✕'}</span>
+          <span>{msg.text}</span>
+        </div>
+      )}
+
+      {/* View Tabs */}
+      <div className="coin-view-tabs">
+        {VIEW_TABS.map(t => (
+          <button
+            key={t.key}
+            className={`coin-view-tab ${viewTab === t.key ? 'coin-view-tab--active' : ''}`}
+            onClick={() => {
+              setViewTab(t.key)
+              setMsg(null)
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Balance View */}
+      {viewTab === 'balance' && (
+        <div className="coin-card">
+          {loading ? (
+            <div className="tab-loading"><span className="spinner" /></div>
+          ) : (
+            <>
+              <div className="balance-display">
+                <div className="balance-label">当前余额</div>
+                <div className="balance-value">{balance}</div>
+                <div className="balance-unit">coins</div>
+              </div>
+              <button className="btn btn-primary" onClick={() => loadData()} style={{ marginTop: '1rem' }}>
+                刷新
+              </button>
+              <p/>
+              <button className="btn btn-ghost" onClick={() => window.open('/api/user/coins/buy', '_blank')} style={{ marginTop: '1rem' }}>
+                购买 coins
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Redeem View */}
+      {viewTab === 'redeem' && (
+        <div className="coin-card">
+          <h3 className="section-title">使用兑换码</h3>
+          <input
+            type="text"
+            placeholder="输入兑换码"
+            value={redeemToken}
+            onChange={(e) => setRedeemToken(e.target.value)}
+            className="coin-input"
+            disabled={redeeming}
+          />
+          <button
+            className="btn btn-primary"
+            onClick={handleRedeem}
+            disabled={redeeming || !redeemToken.trim()}
+            style={{ marginTop: '0.75rem' }}
+          >
+            {redeeming ? <><span className="spinner" /> 兑换中…</> : '兑换'}
+          </button>
+          <p className="section-desc" style={{ marginTop: '0.85rem' }}>输入有效的兑换码以获取 coins</p>
+        </div>
+      )}
+
+      {/* Transfer View */}
+      {viewTab === 'transfer' && (
+        <div className="coin-card">
+          <h3 className="section-title">转账</h3>
+          <div className="coin-form-group">
+            <label className="coin-label">收款人用户名</label>
+            <input
+              type="text"
+              placeholder="输入收款人用户名"
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              className="coin-input"
+              disabled={transferring}
+            />
+          </div>
+          <div className="coin-form-group">
+            <label className="coin-label">转账数量</label>
+            <input
+              type="number"
+              placeholder="输入转账数量"
+              value={transferAmount}
+              onChange={(e) => setTransferAmount(e.target.value)}
+              className="coin-input"
+              disabled={transferring}
+              min="1"
+            />
+            <div className="coin-hint">当前余额: {balance} coins</div>
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={handleTransfer}
+            disabled={transferring || !recipient.trim() || !transferAmount}
+            style={{ marginTop: '0.75rem' }}
+          >
+            {transferring ? <><span className="spinner" /> 转账中…</> : '转账'}
+          </button>
+        </div>
+      )}
+
+      {/* History View */}
+      {viewTab === 'history' && (
+        <div className="coin-card">
+          <h3 className="section-title">交易历史</h3>
+          {loading ? (
+            <div className="tab-loading"><span className="spinner" /></div>
+          ) : history.length === 0 ? (
+            <p className="empty-hint">暂无交易记录</p>
+          ) : (
+            <>
+              <div className="transaction-list">
+                {history.map((t) => (
+                  <div key={t.id} className="transaction-item">
+                    <div className="transaction-info">
+                      <div className="transaction-type">
+                        {t.transactionType === 'TOKEN_REDEEM' && '🎁 兑换码'}
+                        {t.transactionType === 'ADMIN_ADD' && '⊕ 管理员'}
+                        {t.transactionType === 'ADMIN_SUBTRACT' && '⊖ 扣除'}
+                        {t.transactionType === 'TRANSFER_SENT' && '➡️ 转账（发出）'}
+                        {t.transactionType === 'TRANSFER_RECEIVED' && '⬅️ 转账（收到）'}
+                        {t.transactionType === 'PAID_USER_API_FETCH' && '💳 付费 API 获取'}
+                        {!['TOKEN_REDEEM', 'ADMIN_ADD', 'ADMIN_SUBTRACT', 'TRANSFER_SENT', 'TRANSFER_RECEIVED', 'PAID_USER_API_FETCH'].includes(t.transactionType) && '📝 其他'}
+                      </div>
+                      <div className="transaction-desc">{t.description}</div>
+                    </div>
+                    <div className={`transaction-amount ${t.amount > 0 ? 'positive' : 'negative'}`}>
+                      {t.amount > 0 ? '+' : ''}{t.amount}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="history-pagination">
+                <label className="history-pagination-size">
+                  <span className="history-pagination-size-label">每页</span>
+                  <select
+                    className="history-page-size-select"
+                    value={historyPageSize}
+                    onChange={e => handleHistoryPageSizeChange(Number(e.target.value))}
+                    disabled={loading}
+                  >
+                    {HISTORY_PAGE_SIZE_OPTIONS.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                  disabled={historyPage === 1 || loading}
+                >
+                  上一页
+                </button>
+                <span className="history-pagination-label mono">第 {historyPage} 页 / 共 {historyTotalPages} 页</span>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
+                  disabled={historyPage >= historyTotalPages || loading}
+                >
+                  下一页
+                </button>
+                <form className="history-pagination-jump" onSubmit={handleHistoryJump}>
+                  <input
+                    className="coin-input history-page-jump-input"
+                    type="number"
+                    min={1}
+                    max={historyTotalPages}
+                    placeholder="页码"
+                    value={historyJumpInput}
+                    onChange={e => setHistoryJumpInput(e.target.value)}
+                    disabled={loading || historyTotalPages <= 1}
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-ghost btn-sm"
+                    disabled={loading || historyTotalPages <= 1 || !historyJumpInput}
+                  >
+                    跳转
+                  </button>
+                </form>
+              </div>
+            </>
+          )}
+          <button className="btn btn-ghost" onClick={() => loadData()} style={{ marginTop: '0.75rem' }}>
+            刷新
+          </button>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
+/* ─── Security tab ─────────────────────────────────────────── */
+function SecurityTab({ user }: { user: UserInfoDef }) {
+  const [passkeys, setPasskeys] = useState<PasskeyItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState<number | null>(null)
+  const [registering, setRegistering] = useState(false)
+  const [passkeySupported, setPasskeySupported] = useState(false)
+  const [passkeyMsg, setPasskeyMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  const loadPasskeys = async () => {
+    setLoading(true)
+    try {
+      const r = await listPasskeys()
+      if (r.code === 0) {
+        setPasskeys(r.data ?? [])
+      } else {
+        setPasskeyMsg({ type: 'err', text: r.msg || '加载 Passkey 列表失败' })
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    setPasskeySupported(typeof window !== 'undefined' && !!window.PublicKeyCredential && window.isSecureContext)
+    loadPasskeys()
+  }, [])
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('确定删除此 Passkey？')) return
+    setDeleting(id)
+    setPasskeyMsg(null)
+    try {
+      const res = await deletePasskey(id)
+      if (res.code === 0) {
+        setPasskeys(pk => pk.filter(p => p.id !== id))
+      } else {
+        setPasskeyMsg({ type: 'err', text: res.msg || '删除 Passkey 失败' })
+      }
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  const handleRegisterPasskey = async () => {
+    if (!passkeySupported) {
+      setPasskeyMsg({ type: 'err', text: '当前浏览器或环境不支持 Passkey，请使用 HTTPS 和支持 WebAuthn 的浏览器。' })
+      return
+    }
+
+    setRegistering(true)
+    setPasskeyMsg(null)
+    try {
+      const optRes = await getPasskeyRegisterOptions()
+      if (optRes.code !== 0) throw new Error(optRes.msg || '获取 Passkey 注册参数失败')
+
+      const { challengeId, options } = optRes.data
+      const creationOptions = parseRegistrationCreationOptions(options)
+      const credential = await navigator.credentials.create(creationOptions)
+
+      if (!(credential instanceof PublicKeyCredential)) {
+        throw new Error('浏览器未返回有效的 Passkey 凭据')
+      }
+
+      const res = await verifyPasskeyRegister(challengeId, serializeRegistrationCredential(credential), `${user.username} Passkey`)
+      if (res.code !== 0) throw new Error(res.msg || 'Passkey 注册失败')
+
+      setPasskeyMsg({ type: 'ok', text: 'Passkey 注册成功' })
+      await loadPasskeys()
+    } catch (e: unknown) {
+      const err = e as Error
+      if (err.name === 'NotAllowedError') {
+        setPasskeyMsg({ type: 'err', text: 'Passkey 注册已取消或超时' })
+      } else {
+        setPasskeyMsg({ type: 'err', text: err.message || 'Passkey 注册失败' })
+      }
+    } finally {
+      setRegistering(false)
+    }
+  }
+
+  return (
+    <motion.div className="tab-pane" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <h3 className="section-title">Passkey / 安全密钥</h3>
+      <p className="section-desc" style={{ marginBottom: '0.85rem' }}>通过 WebAuthn Passkey 实现无密码安全登录。</p>
+
+      {passkeyMsg && (
+        <div className={`alert ${passkeyMsg.type === 'ok' ? 'alert-success' : 'alert-error'}`} style={{ marginBottom: '0.85rem' }}>
+          <span>{passkeyMsg.type === 'ok' ? '✓' : '✕'}</span>
+          <span>{passkeyMsg.text}</span>
+        </div>
+      )}
+
+      {!passkeySupported && (
+        <div className="alert alert-warn" style={{ marginBottom: '0.85rem' }}>
+          <span>⚠️</span>
+          <span>Passkey 注册需要 HTTPS 安全上下文和支持 WebAuthn 的浏览器。</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="tab-loading"><span className="spinner" /></div>
+      ) : passkeys.length === 0 ? (
+        <p className="empty-hint">暂无注册的 Passkey</p>
+      ) : (
+        <div className="passkey-list">
+          {passkeys.map(pk => (
+            <div key={pk.id} className="passkey-item">
+              <span className="passkey-icon">🔑</span>
+              <div>
+                <div className="passkey-name">{pk.name}</div>
+                <div className="passkey-date">创建于 {pk.createdAt?.split('T')[0]}</div>
+              </div>
+              <button
+                className="btn btn-danger btn-sm"
+                style={{ marginLeft: 'auto' }}
+                onClick={() => handleDelete(pk.id)}
+                disabled={deleting === pk.id}
+              >
+                {deleting === pk.id ? <span className="spinner" /> : '删除'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button
+        className="btn btn-ghost"
+        style={{ marginTop: '1rem' }}
+        onClick={handleRegisterPasskey}
+        disabled={!passkeySupported || registering}
+      >
+        {registering ? <><span className="spinner" /> 注册中…</> : '+ 添加 Passkey'}
+      </button>
+
+      <hr className="divider" />
+      <h3 className="section-title">密码与账号安全</h3>
+      <div className="info-grid">
+        <InfoRow label="账号邮箱" value={user.email} mono />
+      </div>
+      <a href="/forgot-password" className="btn btn-ghost" style={{ marginTop: '0.75rem' }}>
+        重置密码
+      </a>
+    </motion.div>
+  )
+}
+
+/* ─── Shared sub-components ────────────────────────────────── */
+function InfoRow({ label, value, mono }: { label: string; value?: string; mono?: boolean }) {
+  return (
+    <div className="info-row">
+      <span className="info-label">{label}</span>
+      <span className={`info-value ${mono ? 'mono' : ''}`}>{value ?? '—'}</span>
+    </div>
+  )
+}

@@ -1,0 +1,131 @@
+/* Shared auth page styles */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  position: relative;
+}
+
+.auth-bg-orb {
+  position: fixed;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(ellipse, rgba(152, 89, 255, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem 1.75rem;
+  position: relative;
+  z-index: 1;
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+}
+
+.auth-logo {
+  font-size: 1.8rem;
+  color: var(--accent);
+  text-align: center;
+  filter: drop-shadow(0 0 10px var(--accent-glow));
+  margin-bottom: 0.4rem;
+}
+
+.auth-title {
+  font-family: var(--font-ui);
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-align: center;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+
+.auth-sub {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  text-align: center;
+  margin-bottom: 1.6rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 0.72rem;
+  font-size: 0.95rem;
+  margin-top: 0.65rem;
+  border-radius: var(--radius-lg);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 1.1rem 0;
+  color: var(--text-3);
+  font-size: 0.78rem;
+  font-family: var(--font-ui);
+}
+
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.social-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.social-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.auth-footer {
+  margin-top: 1.4rem;
+  text-align: center;
+  font-size: 0.83rem;
+  color: var(--text-3);
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Success state */
+.auth-success {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.auth-success-icon {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+.auth-success p {
+  color: var(--text-2);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
