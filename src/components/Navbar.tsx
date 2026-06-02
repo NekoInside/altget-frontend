@@ -29,9 +29,6 @@ export default function Navbar() {
       items.push({ to: '/convert', label: 'SAuth转换', active: isActive(location.pathname, '/convert') })
       items.push({ to: '/profile', label: '个人中心', active: isActive(location.pathname, '/profile') })
     }
-    if (user?.role === 0) {
-      items.push({ to: '/admin', label: '管理后台', active: location.pathname.startsWith('/admin') })
-    }
     return items
   }, [location.pathname, user])
 

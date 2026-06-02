@@ -56,56 +56,6 @@ export interface ApiKeyInfo {
   limitTime: number
 }
 
-// ---------- Admin ----------
-export interface AdminStats {
-  totalUsers: number
-  totalTokens: number
-  usedTokens: number
-  unusedTokens: number
-}
-
-export interface AdminUserDetail {
-  userId: number
-  username: string
-  email: string
-  discordId: string | null
-  githubId: string | null
-  telegramId: string | null
-  role: number
-  level: number
-  banReason: string | null
-  coinBalance: number
-}
-
-export interface AdminUserSearchResult {
-  userId: number
-  username: string
-  email: string
-  role: number
-}
-
-export interface AdminUserListResult {
-  users: AdminUserSearchResult[]
-  total: number
-  pages: number
-}
-
-export interface TokenEntity {
-  tokenId: string
-  coinAmount: number
-  createdBy: number
-  createdAt: string
-  redeemedBy: number | null
-  redeemedAt: string | null
-  used: boolean
-}
-
-export interface AdminTokenListResult {
-  tokens: TokenEntity[]
-  total: number
-  pages: number
-}
-
 // ---------- Announcement ----------
 export interface Announcement {
   id: number
