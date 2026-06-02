@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
 import { getAuthHeaders } from '@/api/http'
 import { getPowTask } from '@/services/pow'
 import './FetchPanel.css'
@@ -15,7 +14,6 @@ interface FetchResult {
 }
 
 export default function FetchPanel() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<FetchResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -115,15 +113,6 @@ export default function FetchPanel() {
     setTimeout(() => setCopied(null), 1800)
   }
 
-  const goToConvert = () => {
-    if (!result) return
-    const params = new URLSearchParams({
-      username: result.username,
-      password: result.password,
-    })
-    navigate(`/convert?${params.toString()}`)
-  }
-
   return (
     <div className="fetch-panel">
       <div className="fetch-panel-header">
@@ -169,7 +158,6 @@ export default function FetchPanel() {
         {result && (
           <motion.div className="result-card" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
             <div className="result-actions">
-              <button className="btn btn-primary btn-sm" onClick={goToConvert}>转换 SAuth</button>
               <button className="btn btn-ghost btn-sm" onClick={() => copyText(`${result.username}----${result.password}`, 'all')}>
                 {copied === 'all' ? '已复制' : '复制全部'}
               </button>

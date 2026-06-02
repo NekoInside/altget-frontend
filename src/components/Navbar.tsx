@@ -26,7 +26,6 @@ export default function Navbar() {
   const navItems = useMemo(() => {
     const items = [{ to: '/', label: '获取账号', active: isActive(location.pathname, '/') }]
     if (user) {
-      items.push({ to: '/convert', label: 'SAuth转换', active: isActive(location.pathname, '/convert') })
       items.push({ to: '/profile', label: '个人中心', active: isActive(location.pathname, '/profile') })
     }
     return items

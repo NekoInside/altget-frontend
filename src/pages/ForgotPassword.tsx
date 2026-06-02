@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { getPowTask } from '@/services/pow'
+import { forgotPassword } from '@/api/user'
 import './Auth.css'
 
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
@@ -56,14 +56,10 @@ export default function ForgotPassword() {
   const doRequest = async () => {
     if (!captchaResRef.current) return
     try {
-      const { taskId, nonce } = await getPowTask('forgot-password')
-      const res = await fetch('/api/user/forgot-password', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, powId: taskId, nonce, ...captchaResRef.current }),
+      const data = await forgotPassword({
+        email,
+        ...captchaResRef.current,
       })
-      const data = await res.json()
       if (data.code === 0) {
         setSent(true)
       } else {

@@ -41,13 +41,12 @@ export const register = (payload: {
 }) => apiPost<null>('/auth/register', payload)
 
 export const forgotPassword = (payload: {
-  powId: string; nonce: string
   captchaId: string; captchaOutput: string; genTime: string; lotNumber: string; passToken: string
   email: string
-}) => apiPost<null>('/user/forgot-password', payload)
+}) => apiPost<null>('/auth/forgot-password', payload)
 
-export const resetPassword = (token: string, password: string) =>
-  apiPost<null>('/user/reset-password', { token, password })
+export const resetPassword = (token: string, salt: string, verifier: string) =>
+  apiPost<null>('/auth/reset-password', { token, salt, verifier })
 
 export const activateAccount = (token: string) =>
   apiGet<null>('/auth/activate', { code: token })

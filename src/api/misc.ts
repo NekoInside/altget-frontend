@@ -1,5 +1,5 @@
 import { apiGet, apiPost, getAuthHeaders } from './http'
-import type { Announcement, StatusData, PowTask, ConvertResult, PasskeyItem } from '@/types/api'
+import type { Announcement, StatusData, PowTask, PasskeyItem } from '@/types/api'
 
 // ---- Announcements ----
 export const getAnnouncements = () => apiGet<Announcement[]>('/announce')
@@ -8,17 +8,9 @@ export const getAnnouncements = () => apiGet<Announcement[]>('/announce')
 export const getStatus = () => apiGet<StatusData>('/status')
 
 // ---- PoW ----
-export type PowTarget = 'register' | 'forgot-password' | 'new-key' | 'fetch' | 'convert' | 'login'
+export type PowTarget = 'register' | 'forgot-password' | 'new-key' | 'fetch' | 'login'
 export const getPowTask = (target: PowTarget) =>
   apiGet<PowTask>('/pow', { target })
-
-// ---- Convert ----
-export const submitConvertRequest = (payload: {
-  username: string; password: string; id: string; n: string
-}) => apiPost<ConvertResult>('/convert/post-request', payload)
-
-export const getConvertResult = (taskId: string) =>
-  apiGet<ConvertResult>(`/convert/get-result/${taskId}`)
 
 // ---- Passkeys ----
 export const getPasskeyRegisterOptions = () =>

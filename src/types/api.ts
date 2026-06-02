@@ -73,14 +73,6 @@ export interface StatusData {
   last15mAverageRequestTime: number
 }
 
-// ---------- Convert ----------
-export interface ConvertResult {
-  id: string
-  finished: boolean
-  success: boolean
-  result: string | null
-}
-
 // ---------- Passkey ----------
 export interface PasskeyItem {
   id: number

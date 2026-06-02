@@ -2,18 +2,15 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { resetPassword } from '@/api/user'
+import { createSrpRegistration } from '@/utils/srp'
 import './Auth.css'
 
 const isValidPassword = (password: string) =>
   /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d_.!@#$%^&*]{8,}$/.test(password)
 
-async function hashPassword(password: string): Promise<string> {
-  const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password + '==altget'))
-  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
-
 export default function ResetPassword() {
   const token = useMemo(() => new URLSearchParams(window.location.search).get('token') || '', [])
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -28,6 +25,10 @@ export default function ResetPassword() {
       setError('重置链接无效，请重新申请找回密码')
       return
     }
+    if (!username.trim()) {
+      setError('请输入账号用户名')
+      return
+    }
     if (!isValidPassword(password)) {
       setError('密码至少 8 位，需含字母和数字')
       return
@@ -39,8 +40,8 @@ export default function ResetPassword() {
 
     setLoading(true)
     try {
-      const passwordHash = await hashPassword(password)
-      const res = await resetPassword(token, passwordHash)
+      const { salt, verifier } = await createSrpRegistration(username.trim(), password)
+      const res = await resetPassword(token, salt, verifier)
       if (res.code === 0) {
         setSuccess(true)
       } else {
@@ -70,6 +71,18 @@ export default function ResetPassword() {
             <h1 className="auth-title">重置密码</h1>
             <p className="auth-sub">设置一个新的登录密码</p>
             <form className="auth-form" onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="label">用户名</label>
+                <input
+                  className="input-field"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="输入你的账号用户名"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  required
+                />
+              </div>
               <div className="form-group">
                 <label className="label">新密码</label>
                 <input
