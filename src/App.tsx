@@ -7,6 +7,7 @@ import Register from '@/pages/Register'
 import ForgotPassword from '@/pages/ForgotPassword'
 import ResetPassword from '@/pages/ResetPassword'
 import Activate from '@/pages/Activate'
+import OAuthCallback from '@/pages/OAuthCallback'
 import Profile from '@/pages/Profile'
 import Convert from '@/pages/Convert'
 import Admin from '@/pages/Admin'
@@ -40,6 +41,8 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/activate" element={<Activate />} />
+        <Route path="/github-callback" element={<OAuthCallback provider="github" />} />
+        <Route path="/discord-callback" element={<OAuthCallback provider="discord" />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/convert" element={<Convert />} />
         <Route path="/admin" element={<Admin />} />

@@ -10,9 +10,13 @@ export interface ApiResponse<T = null> {
 
 // ---------- User ----------
 export interface UserInfo {
+  id?: number
+  name?: string
   username: string
   email: string
+  registrationTime?: string
   registerTime: string
+  lastLoginTime?: string
   lastUseTime: string | null
   coinBalance: number
   githubBound: boolean
@@ -44,7 +48,9 @@ export interface CoinHistoryResult {
 
 // ---------- API Key ----------
 export interface ApiKeyInfo {
+  apiKey?: string
   key: string
+  limitLevel?: number | string
   dailyUsage: number
   userTier: number
   limitTime: number

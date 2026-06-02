@@ -1,12 +1,24 @@
 import { apiGet, apiPost } from './http'
 import type { ApiKeyInfo } from '@/types/api'
 
-export const getApiKeyInfo = () => apiGet<ApiKeyInfo>('/uf/info')
+const normalizeApiKeyInfo = (info: ApiKeyInfo): ApiKeyInfo => ({
+  ...info,
+  key: info.key ?? info.apiKey ?? '',
+  userTier: info.userTier ?? (typeof info.limitLevel === 'number' ? info.limitLevel : 0),
+  dailyUsage: info.dailyUsage ?? 0,
+  limitTime: info.limitTime ?? 0,
+})
+
+export const getApiKeyInfo = async () => {
+  const res = await apiGet<ApiKeyInfo>('/user/self/api-key')
+  if (res.code === 0 && res.data) res.data = normalizeApiKeyInfo(res.data)
+  return res
+}
 
 export const generateNewApiKey = (captchaPayload: {
-  powId: string; nonce: string
+  taskId: string; result: string
   captchaId: string; captchaOutput: string; genTime: string; lotNumber: string; passToken: string
-}) => apiPost<string>('/uf/new-key', captchaPayload)
+}) => apiPost<ApiKeyInfo>('/user/self/api-key/new', captchaPayload)
 
 // For direct API usage: GET /api/uf/get with header x-ciallo: {apiKey}
 // This is done client-side via fetch with custom headers

@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { activateAccount } from '@/api/user'
 import './Auth.css'
 
 export default function Activate() {
@@ -15,8 +16,7 @@ export default function Activate() {
       return
     }
 
-    fetch(`/api/user/activate?token=${encodeURIComponent(token)}`, { credentials: 'include' })
-      .then(r => r.json())
+    activateAccount(token)
       .then(data => {
         if (data.code === 0) {
           setStatus('ok')

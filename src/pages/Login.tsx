@@ -2,15 +2,15 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/auth'
-import { getUserInfo } from '@/api/user'
-import { invokeCustomPow } from '@/services/pow'
+import { getPasswordChallenge, getUserInfo, verifyPasswordLogin } from '@/api/user'
+import { createSrpLoginProof, extractToken } from '@/utils/srp'
 import { bufferToBase64url, parseAuthenticationRequestOptions } from '@/utils/webauthn'
 import './Auth.css'
 
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { setUser } = useAuthStore()
+  const { setToken, setUser } = useAuthStore()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +34,7 @@ export default function Login() {
     try {
       const available = await (PublicKeyCredential as unknown as { isConditionalMediationAvailable(): Promise<boolean> }).isConditionalMediationAvailable()
       if (!available) return
-      const optRes = await fetch('/api/passkey/login/options', {
+      const optRes = await fetch('/api/auth/passkey/login/options', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', credentials: 'include'
       })
       const optData = await optRes.json()
@@ -69,13 +69,16 @@ export default function Login() {
       },
       clientExtensionResults: credential.getClientExtensionResults(),
     }
-    const res = await fetch('/api/passkey/login/verify', {
+    const res = await fetch('/api/auth/passkey/login/verify', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ challengeId, credential: JSON.stringify(credJson) }),
     })
     const data = await res.json()
     if (data.code !== 0) throw new Error(data.msg)
+    const token = extractToken(data.data)
+    if (!token) throw new Error('登录响应缺少 token')
+    setToken(token)
     await afterLogin()
   }
 
@@ -84,7 +87,7 @@ export default function Login() {
     setPasskeyLoading(true)
     setError(null)
     try {
-      const optRes = await fetch('/api/passkey/login/options', {
+      const optRes = await fetch('/api/auth/passkey/login/options', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', credentials: 'include'
       })
       const optData = await optRes.json()
@@ -117,32 +120,14 @@ export default function Login() {
     setLoading(true)
 
     try {
-      // Build sBox: shuffled indices 0-63 as hex pairs
-      const indices = Array.from({ length: 64 }, (_, i) => i)
-      for (let i = indices.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [indices[i], indices[j]] = [indices[j], indices[i]]
-      }
-      const sboxHex = indices.map(n => n.toString(16).padStart(2, '0')).join('')
-
-      // Hash password: sha256(password + "==altget")
-      const pwdBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password + '==altget'))
-      const pwdHex = Array.from(new Uint8Array(pwdBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
-
-      const ts = Math.floor(Date.now() / 1000)
-      // PoW input = sboxHex + pwdHex + ts, difficulty 3
-      const nonce = await invokeCustomPow(sboxHex + pwdHex + ts, 3)
-
-      const res = await fetch('/api/user/login', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, ts, nonce: sboxHex + nonce }),
-      })
-      const data = await res.json()
-      if (data.code !== 0) {
-        throw new Error(data.msg || '登录失败')
-      }
+      const challenge = await getPasswordChallenge(username)
+      if (challenge.code !== 0) throw new Error(challenge.msg || '登录失败')
+      const proof = await createSrpLoginProof(username, password, challenge.data.salt, challenge.data.serverPublicKey)
+      const data = await verifyPasswordLogin(challenge.data.challengeId, proof.a, proof.m1)
+      if (data.code !== 0) throw new Error(data.msg || '登录失败')
+      const token = extractToken(data.data)
+      if (!token) throw new Error('登录响应缺少 token')
+      setToken(token)
       await afterLogin()
     } catch (err: unknown) {
       setError((err as Error).message || '登录失败')
@@ -207,7 +192,7 @@ export default function Login() {
         <div className="auth-divider"><span>或使用</span></div>
 
         <div className="social-btns">
-          <a href="/api/user/login-with-github" className="btn btn-ghost social-btn">
+          <a href="/api/auth/github" className="btn btn-ghost social-btn">
             <GithubIcon /> GitHub 登录
           </a>
           {passkeySupported && (

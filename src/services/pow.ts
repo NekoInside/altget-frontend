@@ -33,8 +33,9 @@ export async function invokeCustomPow(data: string, difficulty: number): Promise
 }
 
 export async function getPowTask(target: string): Promise<{ taskId: string; nonce: string }> {
-  const res = await fetch(`/api/getPowWasmTask?target=${target}`, { credentials: 'include' })
-  const { taskId, data, difficulty } = await res.json()
+  const res = await fetch(`/api/pow?target=${target}`, { credentials: 'include' })
+  const json = await res.json()
+  const { taskId, data, difficulty } = json.data ?? json
   const nonce = await invokeCustomPow(data, difficulty)
   return { taskId, nonce }
 }

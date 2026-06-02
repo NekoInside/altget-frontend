@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/auth'
 import type { UserInfo, ApiKeyInfo, PasskeyItem, CoinBalance, CoinTransaction } from '@/types/api'
 import { getUserInfo, getCoinBalance, getCoinHistory, redeemToken as redeemTokenAPI, transferCoins } from '@/api/user'
 import { getApiKeyInfo, generateNewApiKey } from '@/api/apikey'
 import { listPasskeys, deletePasskey, getPasskeyRegisterOptions, verifyPasskeyRegister } from '@/api/misc'
+import { getPowTask } from '@/services/pow'
 import { parseRegistrationCreationOptions, serializeRegistrationCredential } from '@/utils/webauthn'
 import { Navigate } from 'react-router-dom'
 import './Profile.css'
+
+const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
 
 type UserInfoDef = UserInfo
 
@@ -140,8 +143,12 @@ function ApiKeyTab() {
   const [info, setInfo] = useState<ApiKeyInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [genLoading, setGenLoading] = useState(false)
+  const [showCaptcha, setShowCaptcha] = useState(false)
   const [copied, setCopied] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const captchaResRef = useRef<{
+    captchaId: string; captchaOutput: string; genTime: string; lotNumber: string; passToken: string
+  } | null>(null)
 
   useEffect(() => {
     getApiKeyInfo().then(r => {
@@ -156,17 +163,60 @@ function ApiKeyTab() {
     setTimeout(() => setCopied(false), 1800)
   }
 
-  const regen = async () => {
+  useEffect(() => {
+    if (!showCaptcha) return
+    const interval = setInterval(() => {
+      const el = document.getElementById('gt-container-apikey')
+      if (!el) return
+      clearInterval(interval)
+      if (typeof initGeetest4 === 'undefined') {
+        setShowCaptcha(false)
+        setGenLoading(false)
+        setErr('验证码组件未加载，请刷新页面')
+        return
+      }
+      initGeetest4({ captchaId: CAPTCHA_ID, product: 'popup' }, (obj) => {
+        obj.appendTo('#gt-container-apikey')
+        obj.onSuccess(() => {
+          const r = obj.getValidate()
+          captchaResRef.current = {
+            captchaId: r.captcha_id,
+            captchaOutput: r.captcha_output,
+            genTime: r.gen_time,
+            lotNumber: r.lot_number,
+            passToken: r.pass_token,
+          }
+          setShowCaptcha(false)
+          createApiKey()
+        })
+      })
+    }, 200)
+    return () => clearInterval(interval)
+  }, [showCaptcha])
+
+  const regen = () => {
     setErr(null)
     setGenLoading(true)
+    captchaResRef.current = null
+    if (typeof initGeetest4 === 'undefined') {
+      setErr('验证码组件未加载，请刷新页面')
+      setGenLoading(false)
+      return
+    }
+    setShowCaptcha(true)
+  }
+
+  const createApiKey = async () => {
+    if (!captchaResRef.current) return
     try {
-      // PoW + Captcha required
+      const { taskId, nonce } = await getPowTask('new-api')
       const res = await generateNewApiKey({
-        powId: 'demo', nonce: 'demo',
-        captchaId: '', captchaOutput: '', genTime: '', lotNumber: '', passToken: '',
+        taskId,
+        result: nonce,
+        ...captchaResRef.current,
       })
       if (res.code === 0) {
-        setInfo(prev => prev ? { ...prev, key: res.data! } : null)
+        setInfo(res.data)
       } else {
         setErr(res.msg)
       }
@@ -200,13 +250,19 @@ function ApiKeyTab() {
 
       {err && <div className="alert alert-error"><span>✕</span><span>{err}</span></div>}
 
+      {showCaptcha && (
+        <div className="captcha-wrapper" style={{ marginTop: '0.75rem' }}>
+          <div id="gt-container-apikey" />
+        </div>
+      )}
+
       <div className="alert alert-warn" style={{ marginTop: '0.75rem' }}>
         <span>⚠️</span>
         <span>重新生成将立即使旧 Key 失效。</span>
       </div>
 
-      <button className="btn btn-primary" onClick={regen} disabled={genLoading} style={{ marginTop: '1rem' }}>
-        {genLoading ? <><span className="spinner" /> 生成中…</> : info ? '重新生成 Key' : '生成 API Key'}
+      <button className="btn btn-primary" onClick={regen} disabled={genLoading || showCaptcha} style={{ marginTop: '1rem' }}>
+        {genLoading ? <><span className="spinner" /> 生成中…</> : showCaptcha ? '请完成验证…' : info ? '重新生成 Key' : '生成 API Key'}
       </button>
 
       <hr className="divider" />

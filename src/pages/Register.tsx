@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { getPowTask } from '@/services/pow'
+import { register } from '@/api/user'
+import { createSrpRegistration } from '@/utils/srp'
 import './Auth.css'
 
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
@@ -19,12 +20,6 @@ export default function Register() {
 
   const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(prev => ({ ...prev, [k]: e.target.value }))
-
-  const hashPassword = async (pwd: string): Promise<string> => {
-    const buf = new TextEncoder().encode(pwd + '==altget')
-    const hashBuf = await crypto.subtle.digest('SHA-256', buf)
-    return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
-  }
 
   const isValidUsername = (u: string) =>
     /^(?=.{3,20}$)(?![_.])(?!.*[_.]{2})[a-zA-Z0-9._]+(?<![_.])$/.test(u)
@@ -87,24 +82,14 @@ export default function Register() {
   const doRegister = async () => {
     if (!captchaResRef.current) return
     try {
-      const [pwdHash, { taskId, nonce }] = await Promise.all([
-        hashPassword(form.password),
-        getPowTask('register'),
-      ])
-      const res = await fetch('/api/user/register', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: form.username,
-          email: form.email,
-          password: pwdHash,
-          powId: taskId,
-          nonce,
-          ...captchaResRef.current,
-        }),
+      const { salt, verifier } = await createSrpRegistration(form.username, form.password)
+      const data = await register({
+        username: form.username,
+        email: form.email,
+        salt,
+        verifier,
+        ...captchaResRef.current,
       })
-      const data = await res.json()
       if (data.code === 0) {
         setSuccess(true)
       } else {

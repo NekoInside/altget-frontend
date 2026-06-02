@@ -1,10 +1,24 @@
 import axios from 'axios'
 import type { ApiResponse } from '@/types/api'
+import { getStoredAuthToken } from '@/store/auth'
 
 const http = axios.create({
   baseURL: '/api',
   withCredentials: true,
   timeout: 30_000,
+})
+
+export const getAuthHeaders = (): Record<string, string> => {
+  const token = getStoredAuthToken()
+  return token ? { 'X-Ciallo-Auth': token } : {}
+}
+
+http.interceptors.request.use((config) => {
+  const token = getStoredAuthToken()
+  if (token) {
+    config.headers['X-Ciallo-Auth'] = token
+  }
+  return config
 })
 
 http.interceptors.response.use(

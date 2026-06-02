@@ -14,6 +14,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.5.0",
+    "tssrp6a": "^3.0.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

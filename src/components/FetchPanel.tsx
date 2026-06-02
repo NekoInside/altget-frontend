@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
+import { getAuthHeaders } from '@/api/http'
 import { getPowTask } from '@/services/pow'
 import './FetchPanel.css'
 
@@ -37,7 +38,7 @@ export default function FetchPanel() {
         taskId, nonce, captchaId, captchaOutput, genTime, lotNumber, passToken,
         channel,
       })
-      const res = await fetch(`/api/webFetch?${params}`, { credentials: 'include' })
+      const res = await fetch(`/api/alt?${params}`, { credentials: 'include', headers: getAuthHeaders() })
       const data = await res.json()
       if (data.code !== 0) throw new Error(data.msg || '获取失败')
       const [username, password] = (data.data as string).split('----')
@@ -93,7 +94,7 @@ export default function FetchPanel() {
 
     // Check if captcha can be bypassed
     try {
-      const res = await fetch('/api/user/can-bypass-captcha', { credentials: 'include' })
+      const res = await fetch('/api/user/can-bypass-captcha', { credentials: 'include', headers: getAuthHeaders() })
       const data = await res.json()
       if (data.code === 0) {
         // bypass — call directly

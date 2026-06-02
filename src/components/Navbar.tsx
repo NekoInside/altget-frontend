@@ -14,7 +14,7 @@ import {
 import './Navbar.css'
 
 export default function Navbar() {
-  const { user, setUser } = useAuthStore()
+  const { user, setToken, setUser } = useAuthStore()
   const location = useLocation()
   const navigate = useNavigate()
   const [themeOpen, setThemeOpen] = useState(false)
@@ -65,6 +65,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await logout()
+    setToken(null)
     setUser(null)
     setMobileMenuOpen(false)
     navigate('/')
