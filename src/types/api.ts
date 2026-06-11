@@ -31,22 +31,6 @@ export interface CoinBalance {
   balance: number
 }
 
-export interface CoinTransaction {
-  id: number
-  userId: number
-  amount: number
-  transactionType: string
-  relatedTokenId: string | null
-  description: string
-  createdAt: string
-}
-
-export interface CoinHistoryResult {
-  transactions: CoinTransaction[]
-  total: number
-  pages: number
-}
-
 // ---------- API Key ----------
 export interface ApiKeyInfo {
   apiKey?: string
@@ -55,23 +39,6 @@ export interface ApiKeyInfo {
   dailyUsage: number
   userTier: number
   limitTime: number
-}
-
-// ---------- Announcement ----------
-export interface Announcement {
-  id: number
-  type: 1 | 2
-  context: string
-}
-
-// ---------- Status ----------
-export interface StatusData {
-  last1mGetCount: number
-  last5mGetCount: number
-  last15mGetCount: number
-  last1mAverageRequestTime: number
-  last5mAverageRequestTime: number
-  last15mAverageRequestTime: number
 }
 
 // ---------- Passkey ----------

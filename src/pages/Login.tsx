@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/auth'
-import { getPasswordChallenge, getUserInfo, verifyPasswordLogin } from '@/api/user'
+import { getPasswordChallenge, getUserInfo, verifyPasswordLogin, LOGIN_GITHUB_URL } from '@/api/user'
+import { getPasskeyLoginOptions, verifyPasskeyLogin } from '@/api/misc'
 import { createSrpLoginProof, extractToken } from '@/utils/srp'
 import { bufferToBase64url, parseAuthenticationRequestOptions } from '@/utils/webauthn'
 import { getApiMessage } from '@/utils/apiMessage'
@@ -35,12 +36,9 @@ export default function Login() {
     try {
       const available = await (PublicKeyCredential as unknown as { isConditionalMediationAvailable(): Promise<boolean> }).isConditionalMediationAvailable()
       if (!available) return
-      const optRes = await fetch('/api/auth/passkey/login/options', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', credentials: 'include'
-      })
-      const optData = await optRes.json()
-      if (optData.code !== 0) return
-      const { challengeId, options } = optData.data
+      const optRes = await getPasskeyLoginOptions()
+      if (optRes.code !== 0) return
+      const { challengeId, options } = optRes.data
       const reqOptions = parseAuthenticationRequestOptions(options)
       if (!reqOptions.publicKey) return
       abortRef.current = new AbortController()
@@ -70,14 +68,9 @@ export default function Login() {
       },
       clientExtensionResults: credential.getClientExtensionResults(),
     }
-    const res = await fetch('/api/auth/passkey/login/verify', {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ challengeId, credential: JSON.stringify(credJson) }),
-    })
-    const data = await res.json()
-    if (data.code !== 0) throw new Error(getApiMessage(data, '通行密钥登录失败'))
-    const token = extractToken(data.data)
+    const res = await verifyPasskeyLogin(challengeId, JSON.stringify(credJson))
+    if (res.code !== 0) throw new Error(getApiMessage(res, '通行密钥登录失败'))
+    const token = extractToken(res.data)
     if (!token) throw new Error('登录响应缺少 token')
     setToken(token)
     await afterLogin()
@@ -88,12 +81,9 @@ export default function Login() {
     setPasskeyLoading(true)
     setError(null)
     try {
-      const optRes = await fetch('/api/auth/passkey/login/options', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', credentials: 'include'
-      })
-      const optData = await optRes.json()
-      if (optData.code !== 0) throw new Error(getApiMessage(optData, '通行密钥登录失败'))
-      const { challengeId, options } = optData.data
+      const optRes = await getPasskeyLoginOptions()
+      if (optRes.code !== 0) throw new Error(getApiMessage(optRes, '通行密钥登录失败'))
+      const { challengeId, options } = optRes.data
       const reqOptions = parseAuthenticationRequestOptions(options)
       const credential = await navigator.credentials.get(reqOptions) as PublicKeyCredential | null
       if (!credential) throw new Error('未获取到有效的 Passkey 凭据')
@@ -193,7 +183,7 @@ export default function Login() {
         <div className="auth-divider"><span>或使用</span></div>
 
         <div className="social-btns">
-          <a href="/api/auth/github" className="btn btn-ghost social-btn">
+          <a href={LOGIN_GITHUB_URL} className="btn btn-ghost social-btn">
             <GithubIcon /> GitHub 登录
           </a>
           {passkeySupported && (

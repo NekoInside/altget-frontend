@@ -1,3 +1,5 @@
+import { apiGet } from '@/api/http'
+import type { PowTask } from '@/types/api'
 import PowServiceWasm from './powServiceWasm.js'
 import powServiceWasmPath from './powServiceWasm.wasm?url'
 
@@ -33,9 +35,8 @@ export async function invokeCustomPow(data: string, difficulty: number): Promise
 }
 
 export async function getPowTask(target: string): Promise<{ taskId: string; nonce: string }> {
-  const res = await fetch(`/api/pow?target=${target}`, { credentials: 'include' })
-  const json = await res.json()
-  const { taskId, data, difficulty } = json.data ?? json
+  const res = await apiGet<PowTask>('/pow', { target })
+  const { taskId, data, difficulty } = res.data
   const nonce = await invokeCustomPow(data, difficulty)
   return { taskId, nonce }
 }

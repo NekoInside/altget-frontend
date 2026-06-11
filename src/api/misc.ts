@@ -1,11 +1,5 @@
-import { apiGet, apiPost, getAuthHeaders } from './http'
-import type { Announcement, StatusData, PowTask, PasskeyItem } from '@/types/api'
-
-// ---- Announcements ----
-export const getAnnouncements = () => apiGet<Announcement[]>('/announce')
-
-// ---- Status ----
-export const getStatus = () => apiGet<StatusData>('/status')
+import { apiGet, apiPost, apiDelete } from './http'
+import type { PowTask, PasskeyItem } from '@/types/api'
 
 // ---- PoW ----
 export type PowTarget = 'register' | 'forgot-password' | 'new-key' | 'fetch' | 'login'
@@ -31,6 +25,4 @@ export const verifyPasskeyLogin = (challengeId: string, credential: string) =>
 
 export const listPasskeys = () => apiGet<PasskeyItem[]>('/auth/passkey/list')
 
-export const deletePasskey = (id: number) => {
-  return fetch(`/api/auth/passkey/${id}`, { method: 'DELETE', credentials: 'include', headers: getAuthHeaders() }).then(r => r.json())
-}
+export const deletePasskey = (id: number) => apiDelete(`/auth/passkey/${id}`)

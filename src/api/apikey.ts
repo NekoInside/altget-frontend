@@ -34,20 +34,19 @@ const normalizeAltFetchResult = (payload: unknown): string[] => {
 }
 
 const fetchAltByApiKey = async (apiKey: string, options?: { paid?: boolean; count?: number }): Promise<string[]> => {
-  const params = new URLSearchParams({ userApiKey: apiKey })
+  const params: Record<string, unknown> = { userApiKey: apiKey }
 
   if (options?.paid) {
-    params.set('paid', 'true')
+    params.paid = 'true'
   }
 
   if (typeof options?.count === 'number' && !Number.isNaN(options.count)) {
-    params.set('count', String(options.count))
+    params.count = options.count
   }
 
-  const res = await fetch(`/api/alt?${params.toString()}`)
-  const json = await res.json()
-  if (json.code !== 0) throw new Error(getApiMessage(json, '获取失败'))
-  return normalizeAltFetchResult(json.data)
+  const res = await apiGet<string[]>('/alt', params)
+  if (res.code !== 0) throw new Error(getApiMessage(res, '获取失败'))
+  return normalizeAltFetchResult(res.data)
 }
 
 // Free API fetch: GET /api/alt?userApiKey={apiKey}

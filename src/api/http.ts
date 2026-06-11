@@ -1,9 +1,10 @@
 import axios from 'axios'
 import type { ApiResponse } from '@/types/api'
 import { getStoredAuthToken } from '@/store/auth'
+import { API_BASE } from '@/utils/apiBase'
 
 const http = axios.create({
-  baseURL: '/api',
+  baseURL: `${API_BASE}/api`,
   withCredentials: true,
   timeout: 30_000,
 })

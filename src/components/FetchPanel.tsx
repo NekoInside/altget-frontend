@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getAuthHeaders } from '@/api/http'
+import { apiGet } from '@/api/http'
 import { getPowTask } from '@/services/pow'
 import { getApiMessage } from '@/utils/apiMessage'
 import './FetchPanel.css'
@@ -33,14 +33,13 @@ export default function FetchPanel() {
       // get param from url for channel, default to DEFAULT_CHANNEL
       const urlParams = new URLSearchParams(window.location.search)
       const channel = urlParams.get('channel') === 'bmw' ? BMW_CHANNEL : DEFAULT_CHANNEL
-      const params = new URLSearchParams({
+      const params: Record<string, unknown> = {
         taskId, nonce, captchaId, captchaOutput, genTime, lotNumber, passToken,
         channel,
-      })
-      const res = await fetch(`/api/alt?${params}`, { credentials: 'include', headers: getAuthHeaders() })
-      const data = await res.json()
-      if (data.code !== 0) throw new Error(getApiMessage(data, '获取失败'))
-      const [username, password] = (data.data as string).split('----')
+      }
+      const res = await apiGet<string>('/alt', params)
+      if (res.code !== 0) throw new Error(getApiMessage(res, '获取失败'))
+      const [username, password] = (res.data as string).split('----')
       setResult({ username, password })
     } catch (e: unknown) {
       setError((e as Error).message || '获取失败，请重试')
@@ -93,11 +92,10 @@ export default function FetchPanel() {
 
     // Check if captcha can be bypassed
     try {
-      const res = await fetch('/api/user/can-bypass-captcha', { credentials: 'include', headers: getAuthHeaders() })
-      const data = await res.json()
-      if (data.code === 0) {
+      const res = await apiGet<string>('/user/can-bypass-captcha')
+      if (res.code === 0) {
         // bypass — call directly
-        await doFetch('', '', '', '', typeof data.data === 'string' ? data.data : '')
+        await doFetch('', '', '', '', typeof res.data === 'string' ? res.data : '')
       } else {
         // need captcha
         setShowCaptcha(true)

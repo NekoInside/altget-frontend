@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from './http'
+import { API_BASE } from '@/utils/apiBase'
 import type {
-  UserInfo, CoinBalance, CoinHistoryResult, ApiResponse,
+  UserInfo, CoinBalance, ApiResponse,
 } from '@/types/api'
 
 const normalizeUserInfo = (user: UserInfo): UserInfo => ({
@@ -20,9 +21,6 @@ export const checkSession = async (): Promise<ApiResponse<null>> => ({
   msg: localStorage.getItem('altget.auth.token') ? 'success' : 'Unauthorized',
   data: null,
 })
-
-export const login = (username: string, ts: number, nonce: string) =>
-  apiPost<string>('/auth/login', { username, ts, nonce })
 
 export const getPasswordChallenge = (username: string) =>
   apiGet<{ challengeId: string; salt: string; serverPublicKey: string }>('/auth/password/challenge', { username })
@@ -58,15 +56,10 @@ export const getUserInfo = async () => {
   return res
 }
 
-export const isAllowAnonymous = () => apiGet<string>('/user/is-allow-anonymous')
-
-export const canBypassCaptcha = () => apiGet<string>('/user/can-bypass-captcha')
-
 // ---- Social Bindings (OAuth redirects — just navigate to these URLs) ----
-export const BIND_GITHUB_URL = '/api/auth/github?usage=bind'
-export const LOGIN_GITHUB_URL = '/api/auth/github'
-export const BIND_TG_URL = '/api/user/bind-tg'
-export const BIND_DISCORD_URL = '/api/social/discord/redirect'
+export const BIND_GITHUB_URL = `${API_BASE}/api/auth/github?usage=bind`
+export const LOGIN_GITHUB_URL = `${API_BASE}/api/auth/github`
+export const BIND_DISCORD_URL = `${API_BASE}/api/social/discord/redirect`
 
 export const getGithubOAuthUsage = (state: string) => apiGet<'login' | 'bind'>('/auth/github/state', { state })
 
@@ -88,11 +81,8 @@ export const getCoinBalance = async (): Promise<ApiResponse<CoinBalance>> => {
   }
 }
 
-export const getCoinHistory = (page = 1, size = 20) =>
-  apiGet<CoinHistoryResult>('/user/coins/history', { page, size })
-
 export const redeemToken = (token: string): Promise<ApiResponse<null>> =>
   apiGet('/coins/redeem', { token })
 
-export const transferCoins = (recipientUsername: string, amount: number): Promise<ApiResponse<CoinBalance>> =>
-  apiPost('/user/coins/transfer', { recipientUsername, amount })
+export const transferCoins = (recipientUsername: string, amount: number): Promise<ApiResponse<string>> =>
+  apiGet('/coins/transfer', { targetUserName: recipientUsername, credits: amount })

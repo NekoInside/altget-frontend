@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/auth'
-import type { UserInfo, ApiKeyInfo, PasskeyItem, CoinBalance, CoinTransaction } from '@/types/api'
-import { getUserInfo, getCoinBalance, getCoinHistory, redeemToken as redeemTokenAPI, transferCoins } from '@/api/user'
+import type { UserInfo, ApiKeyInfo, PasskeyItem, CoinBalance } from '@/types/api'
+import { getUserInfo, getCoinBalance, redeemToken as redeemTokenAPI, transferCoins, BIND_GITHUB_URL, BIND_DISCORD_URL } from '@/api/user'
 import { getApiKeyInfo, generateNewApiKey } from '@/api/apikey'
 import { listPasskeys, deletePasskey, getPasskeyRegisterOptions, verifyPasskeyRegister } from '@/api/misc'
 import { getPowTask } from '@/services/pow'
@@ -99,9 +99,8 @@ export default function Profile() {
 /* ─── Overview tab ─────────────────────────────────────────── */
 function OverviewTab({ user }: { user: UserInfoDef }) {
   const socialLinks = [
-    { key: 'github', bound: user.githubBound, label: 'GitHub', href: '/api/user/bind-github', icon: '⌥' },
-    { key: 'discord', bound: user.discordBound, label: 'Discord', href: '/api/discord/bind', icon: '◈' },
-    { key: 'telegram', bound: user.telegramBound, label: 'Telegram', href: '/api/user/bind-tg', icon: '✈' },
+    { key: 'github', bound: user.githubBound, label: 'GitHub', href: BIND_GITHUB_URL, icon: '⌥' },
+    { key: 'discord', bound: user.discordBound, label: 'Discord', href: BIND_DISCORD_URL, icon: '◈' },
   ]
 
   return (
@@ -294,10 +293,7 @@ function KeyStat({ label, value }: { label: string; value: string | number }) {
 
 /* ─── Coins tab ────────────────────────────────────────────── */
 function CoinsTab({ user }: { user: UserInfo }) {
-  const HISTORY_PAGE_SIZE_OPTIONS = [10, 20, 50] as const
-
   const [balance, setBalance] = useState<number>(user.coinBalance ?? 0)
-  const [history, setHistory] = useState<CoinTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
@@ -311,33 +307,14 @@ function CoinsTab({ user }: { user: UserInfo }) {
   const [transferring, setTransferring] = useState(false)
 
   // View Tab
-  const [viewTab, setViewTab] = useState<'balance' | 'redeem' | 'transfer' | 'history'>('balance')
-  const [historyPage, setHistoryPage] = useState(1)
-  const [historyPageSize, setHistoryPageSize] = useState<number>(10)
-  const [historyTotalPages, setHistoryTotalPages] = useState(1)
-  const [historyJumpInput, setHistoryJumpInput] = useState('')
+  const [viewTab, setViewTab] = useState<'balance' | 'redeem' | 'transfer'>('balance')
 
-  const loadData = async (targetPage = historyPage, size = historyPageSize) => {
+  const loadData = async () => {
     setLoading(true)
     try {
-      const [balRes, histRes] = await Promise.all([
-        getCoinBalance(),
-        getCoinHistory(targetPage, size),
-      ])
+      const balRes = await getCoinBalance()
       if (balRes.code === 0) {
         setBalance(balRes.data.balance)
-      }
-      if (histRes.code === 0) {
-        const nextTotalPages = Math.max(1, Number(histRes.data?.pages ?? 1))
-        if (targetPage > nextTotalPages) {
-          setHistoryPage(nextTotalPages)
-          return
-        }
-        setHistory(histRes.data?.transactions ?? [])
-        setHistoryTotalPages(nextTotalPages)
-      } else {
-        setHistory([])
-        setHistoryTotalPages(1)
       }
     } finally {
       setLoading(false)
@@ -345,8 +322,8 @@ function CoinsTab({ user }: { user: UserInfo }) {
   }
 
   useEffect(() => {
-    loadData(historyPage, historyPageSize)
-  }, [historyPage, historyPageSize])
+    loadData()
+  }, [])
 
   const handleRedeem = async () => {
     if (!redeemToken.trim()) {
@@ -405,11 +382,12 @@ function CoinsTab({ user }: { user: UserInfo }) {
     try {
       const res = await transferCoins(recipient.trim(), amount)
       if (res.code === 0) {
-        setBalance(res.data.balance)
         setRecipient('')
         setTransferAmount('')
+        // Refresh balance
+        const balRes = await getCoinBalance()
+        if (balRes.code === 0) setBalance(balRes.data.balance)
         setMsg({ type: 'ok', text: `转账成功！已向 ${recipient} 转账 ${amount} coins` })
-        await loadData()
       } else {
         setMsg({ type: 'err', text: getApiMessage(res, '转账失败') })
       }
@@ -424,22 +402,7 @@ function CoinsTab({ user }: { user: UserInfo }) {
     { key: 'balance', label: '余额' },
     { key: 'redeem', label: '兑换' },
     { key: 'transfer', label: '转账' },
-    { key: 'history', label: '历史' },
   ] as const
-
-  const handleHistoryPageSizeChange = (nextSize: number) => {
-    setHistoryPageSize(nextSize)
-    setHistoryPage(1)
-    setHistoryJumpInput('')
-  }
-
-  const handleHistoryJump = (e: React.FormEvent) => {
-    e.preventDefault()
-    const target = parseInt(historyJumpInput, 10)
-    if (!Number.isFinite(target)) return
-    setHistoryPage(Math.max(1, Math.min(historyTotalPages, target)))
-    setHistoryJumpInput('')
-  }
 
   return (
     <motion.div className="tab-pane" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -481,10 +444,6 @@ function CoinsTab({ user }: { user: UserInfo }) {
               </div>
               <button className="btn btn-primary" onClick={() => loadData()} style={{ marginTop: '1rem' }}>
                 刷新
-              </button>
-              <p/>
-              <button className="btn btn-ghost" onClick={() => window.open('/api/user/coins/buy', '_blank')} style={{ marginTop: '1rem' }}>
-                购买 coins
               </button>
             </>
           )}
@@ -550,94 +509,6 @@ function CoinsTab({ user }: { user: UserInfo }) {
             style={{ marginTop: '0.75rem' }}
           >
             {transferring ? <><span className="spinner" /> 转账中…</> : '转账'}
-          </button>
-        </div>
-      )}
-
-      {/* History View */}
-      {viewTab === 'history' && (
-        <div className="coin-card">
-          <h3 className="section-title">交易历史</h3>
-          {loading ? (
-            <div className="tab-loading"><span className="spinner" /></div>
-          ) : history.length === 0 ? (
-            <p className="empty-hint">暂无交易记录</p>
-          ) : (
-            <>
-              <div className="transaction-list">
-                {history.map((t) => (
-                  <div key={t.id} className="transaction-item">
-                    <div className="transaction-info">
-                      <div className="transaction-type">
-                        {t.transactionType === 'TOKEN_REDEEM' && '🎁 兑换码'}
-                        {t.transactionType === 'ADMIN_ADD' && '⊕ 管理员'}
-                        {t.transactionType === 'ADMIN_SUBTRACT' && '⊖ 扣除'}
-                        {t.transactionType === 'TRANSFER_SENT' && '➡️ 转账（发出）'}
-                        {t.transactionType === 'TRANSFER_RECEIVED' && '⬅️ 转账（收到）'}
-                        {t.transactionType === 'PAID_USER_API_FETCH' && '💳 付费 API 获取'}
-                        {!['TOKEN_REDEEM', 'ADMIN_ADD', 'ADMIN_SUBTRACT', 'TRANSFER_SENT', 'TRANSFER_RECEIVED', 'PAID_USER_API_FETCH'].includes(t.transactionType) && '📝 其他'}
-                      </div>
-                      <div className="transaction-desc">{t.description}</div>
-                    </div>
-                    <div className={`transaction-amount ${t.amount > 0 ? 'positive' : 'negative'}`}>
-                      {t.amount > 0 ? '+' : ''}{t.amount}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="history-pagination">
-                <label className="history-pagination-size">
-                  <span className="history-pagination-size-label">每页</span>
-                  <select
-                    className="history-page-size-select"
-                    value={historyPageSize}
-                    onChange={e => handleHistoryPageSizeChange(Number(e.target.value))}
-                    disabled={loading}
-                  >
-                    {HISTORY_PAGE_SIZE_OPTIONS.map(option => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
-                  disabled={historyPage === 1 || loading}
-                >
-                  上一页
-                </button>
-                <span className="history-pagination-label mono">第 {historyPage} 页 / 共 {historyTotalPages} 页</span>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
-                  disabled={historyPage >= historyTotalPages || loading}
-                >
-                  下一页
-                </button>
-                <form className="history-pagination-jump" onSubmit={handleHistoryJump}>
-                  <input
-                    className="coin-input history-page-jump-input"
-                    type="number"
-                    min={1}
-                    max={historyTotalPages}
-                    placeholder="页码"
-                    value={historyJumpInput}
-                    onChange={e => setHistoryJumpInput(e.target.value)}
-                    disabled={loading || historyTotalPages <= 1}
-                  />
-                  <button
-                    type="submit"
-                    className="btn btn-ghost btn-sm"
-                    disabled={loading || historyTotalPages <= 1 || !historyJumpInput}
-                  >
-                    跳转
-                  </button>
-                </form>
-              </div>
-            </>
-          )}
-          <button className="btn btn-ghost" onClick={() => loadData()} style={{ marginTop: '0.75rem' }}>
-            刷新
           </button>
         </div>
       )}
