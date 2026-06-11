@@ -276,9 +276,9 @@ function ApiKeyTab() {
       <hr className="divider" />
       <h4 className="section-subtitle">使用说明 — SAuth 转换</h4>
       <div className="code-block">
-        <pre className="mono">{`GET /api/alt/convert/sauth?userApiKey={你的 API Key}&username={4399用户名}&password={密码}`}</pre>
+        <pre className="mono">{`GET /api/alt/convert/sauth?userApiKey={你的 API Key}&username={4399用户名}&password={密码}\n\nGET /api/alt/convert/gen?userApiKey={你的 API Key}`}</pre>
       </div>
-      <p className="section-desc">将 4399 账号密码转换为 SAuth Token。返回 <code className="mono">data</code> 字段为 SAuth Token 字符串。</p>
+      <p className="section-desc"><code className="mono">convert/sauth</code> 将指定账号密码转换为 SAuth Token，返回 <code className="mono">data</code> 为 Token 字符串。<code className="mono">convert/gen</code> 获取一个账号并自动转换，返回 <code className="mono">{"{ username, password, sauth }"}</code>。</p>
     </motion.div>
   )
 }
