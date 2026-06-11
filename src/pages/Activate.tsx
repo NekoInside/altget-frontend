@@ -2,6 +2,7 @@ import { useMemo, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { activateAccount } from '@/api/user'
+import { getApiMessage } from '@/utils/apiMessage'
 import './Auth.css'
 
 export default function Activate() {
@@ -21,7 +22,7 @@ export default function Activate() {
         if (data.code === 0) {
           setStatus('ok')
         } else {
-          setErrMsg(data.msg || '激活失败，链接可能已过期。')
+          setErrMsg(getApiMessage(data, '激活失败，链接可能已过期。'))
           setStatus('err')
         }
       })

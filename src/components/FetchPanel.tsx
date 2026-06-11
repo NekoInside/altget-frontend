@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getAuthHeaders } from '@/api/http'
 import { getPowTask } from '@/services/pow'
+import { getApiMessage } from '@/utils/apiMessage'
 import './FetchPanel.css'
 
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
@@ -38,7 +39,7 @@ export default function FetchPanel() {
       })
       const res = await fetch(`/api/alt?${params}`, { credentials: 'include', headers: getAuthHeaders() })
       const data = await res.json()
-      if (data.code !== 0) throw new Error(data.msg || '获取失败')
+      if (data.code !== 0) throw new Error(getApiMessage(data, '获取失败'))
       const [username, password] = (data.data as string).split('----')
       setResult({ username, password })
     } catch (e: unknown) {
@@ -118,6 +119,14 @@ export default function FetchPanel() {
       <div className="fetch-panel-header">
         <h2 className="fetch-panel-title">获取账号</h2>
         <p className="fetch-panel-sub">点击按钮获取一个可用的 4399 小号</p>
+        <div className="fetch-panel-links" aria-label="社区链接">
+          <a href="https://qm.qq.com/q/XLBiA8NdW6" target="_blank" rel="noreferrer noopener">
+            QQ群
+          </a>
+          <a href="https://discord.gg/W3Dn3tk96s" target="_blank" rel="noreferrer noopener">
+            Discord
+          </a>
+        </div>
       </div>
 
       {/* Captcha container (hidden until needed) */}
@@ -187,7 +196,7 @@ export default function FetchPanel() {
             <a href="/profile" className="btn btn-ghost btn-sm">管理 Key →</a>
           </div>
           <p className="api-section-desc">
-            在 <a href="/profile">个人中心</a> 申请 API Key，通过 <code className="mono">GET /api/uf/get</code>（带 <code className="mono">x-ciallo</code> 头）程序化获取账号；也可使用 <code className="mono">GET /api/uf/paid-get?amount=数量</code> 进行付费获取。
+            在 <a href="/profile">个人中心</a> 申请 API Key，通过 <code className="mono">GET /api/alt?userApiKey=你的Key</code> 获取单个账号；付费批量获取时使用 <code className="mono">GET /api/alt?userApiKey=你的Key&amp;paid=true&amp;count=数量</code>。
           </p>
         </div>
       )}

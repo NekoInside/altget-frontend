@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from './http'
 import type { ApiKeyInfo } from '@/types/api'
+import { getApiMessage } from '@/utils/apiMessage'
 
 const normalizeApiKeyInfo = (info: ApiKeyInfo): ApiKeyInfo => ({
   ...info,
@@ -20,29 +21,43 @@ export const generateNewApiKey = (captchaPayload: {
   captchaId: string; captchaOutput: string; genTime: string; lotNumber: string; passToken: string
 }) => apiPost<ApiKeyInfo>('/user/self/api-key/new', captchaPayload)
 
-// For direct API usage: GET /api/uf/get with header x-ciallo: {apiKey}
-// This is done client-side via fetch with custom headers
-export const fetchAltWithApiKey = async (apiKey: string): Promise<string> => {
-  const res = await fetch('/api/uf/get', {
-    headers: { 'x-ciallo': apiKey },
-  })
-  const json = await res.json()
-  if (json.code !== 0) throw new Error(json.msg)
-  return json.data as string
+const normalizeAltFetchResult = (payload: unknown): string[] => {
+  if (Array.isArray(payload)) {
+    return payload.filter((item): item is string => typeof item === 'string')
+  }
+
+  if (typeof payload === 'string' && payload) {
+    return [payload]
+  }
+
+  return []
 }
 
-// Paid API fetch: GET /api/uf/paid-get?amount={amount} with header x-ciallo: {apiKey}
-// Billing type: PAID_USER_API_FETCH
-export const fetchPaidAltWithApiKey = async (apiKey: string, amount?: number): Promise<string> => {
-  const params = new URLSearchParams()
-  if (typeof amount === 'number' && !Number.isNaN(amount)) {
-    params.set('amount', String(amount))
+const fetchAltByApiKey = async (apiKey: string, options?: { paid?: boolean; count?: number }): Promise<string[]> => {
+  const params = new URLSearchParams({ userApiKey: apiKey })
+
+  if (options?.paid) {
+    params.set('paid', 'true')
   }
-  const query = params.toString()
-  const res = await fetch(`/api/uf/paid-get${query ? `?${query}` : ''}`, {
-    headers: { 'x-ciallo': apiKey },
-  })
+
+  if (typeof options?.count === 'number' && !Number.isNaN(options.count)) {
+    params.set('count', String(options.count))
+  }
+
+  const res = await fetch(`/api/alt?${params.toString()}`)
   const json = await res.json()
-  if (json.code !== 0) throw new Error(json.msg)
-  return json.data as string
+  if (json.code !== 0) throw new Error(getApiMessage(json, '获取失败'))
+  return normalizeAltFetchResult(json.data)
+}
+
+// Free API fetch: GET /api/alt?userApiKey={apiKey}
+// Free calls only allow count=1.
+export const fetchAltWithApiKey = async (apiKey: string): Promise<string> => {
+  const result = await fetchAltByApiKey(apiKey)
+  return result[0] ?? ''
+}
+
+// Paid API fetch: GET /api/alt?userApiKey={apiKey}&paid=true&count={count}
+export const fetchPaidAltWithApiKey = (apiKey: string, count = 1): Promise<string[]> => {
+  return fetchAltByApiKey(apiKey, { paid: true, count })
 }

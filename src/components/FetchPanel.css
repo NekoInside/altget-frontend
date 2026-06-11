@@ -20,6 +20,24 @@
   color: var(--text-3);
 }
 
+.fetch-panel-links {
+  display: flex;
+  justify-content: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-top: 0.45rem;
+  font-size: 0.82rem;
+}
+
+.fetch-panel-links a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.fetch-panel-links a:hover {
+  text-decoration: underline;
+}
+
 /* Fetch button */
 .fetch-btn {
   width: 100%;
@@ -35,12 +53,12 @@
 
 /* Result card */
 .result-card {
-  background: rgba(12, 30, 20, 0.6);
+  background: rgba(15, 15, 25, 0.6);
   backdrop-filter: var(--blur);
-  border: 1px solid rgba(52, 211, 153, 0.22);
+  border: 1px solid hsla(var(--theme-h), var(--theme-s), var(--theme-l), 0.12);
   border-radius: var(--radius-lg);
   padding: 1rem 1.1rem;
-  box-shadow: 0 0 18px rgba(52, 211, 153, 0.05);
+  box-shadow: 0 0 18px hsla(var(--theme-h), var(--theme-s), var(--theme-l), 0.04);
 }
 .result-header {
   display: flex; align-items: center;

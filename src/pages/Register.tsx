@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { register } from '@/api/user'
 import { createSrpRegistration } from '@/utils/srp'
+import { getApiMessage } from '@/utils/apiMessage'
 import './Auth.css'
 
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
@@ -93,7 +94,7 @@ export default function Register() {
       if (data.code === 0) {
         setSuccess(true)
       } else {
-        setError(data.msg || '注册失败')
+        setError(getApiMessage(data, '注册失败'))
       }
     } catch {
       setError('网络错误，请稍后重试')

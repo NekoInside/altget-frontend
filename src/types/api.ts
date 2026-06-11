@@ -5,6 +5,7 @@
 export interface ApiResponse<T = null> {
   code: number
   msg: string
+  message?: string
   data: T
 }
 

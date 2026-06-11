@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/auth'
 import { getPasswordChallenge, getUserInfo, verifyPasswordLogin } from '@/api/user'
 import { createSrpLoginProof, extractToken } from '@/utils/srp'
 import { bufferToBase64url, parseAuthenticationRequestOptions } from '@/utils/webauthn'
+import { getApiMessage } from '@/utils/apiMessage'
 import './Auth.css'
 
 export default function Login() {
@@ -75,7 +76,7 @@ export default function Login() {
       body: JSON.stringify({ challengeId, credential: JSON.stringify(credJson) }),
     })
     const data = await res.json()
-    if (data.code !== 0) throw new Error(data.msg)
+    if (data.code !== 0) throw new Error(getApiMessage(data, '通行密钥登录失败'))
     const token = extractToken(data.data)
     if (!token) throw new Error('登录响应缺少 token')
     setToken(token)
@@ -91,7 +92,7 @@ export default function Login() {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', credentials: 'include'
       })
       const optData = await optRes.json()
-      if (optData.code !== 0) throw new Error(optData.msg)
+      if (optData.code !== 0) throw new Error(getApiMessage(optData, '通行密钥登录失败'))
       const { challengeId, options } = optData.data
       const reqOptions = parseAuthenticationRequestOptions(options)
       const credential = await navigator.credentials.get(reqOptions) as PublicKeyCredential | null
@@ -121,10 +122,10 @@ export default function Login() {
 
     try {
       const challenge = await getPasswordChallenge(username)
-      if (challenge.code !== 0) throw new Error(challenge.msg || '登录失败')
+      if (challenge.code !== 0) throw new Error(getApiMessage(challenge, '登录失败'))
       const proof = await createSrpLoginProof(username, password, challenge.data.salt, challenge.data.serverPublicKey)
       const data = await verifyPasswordLogin(challenge.data.challengeId, proof.a, proof.m1)
-      if (data.code !== 0) throw new Error(data.msg || '登录失败')
+      if (data.code !== 0) throw new Error(getApiMessage(data, '登录失败'))
       const token = extractToken(data.data)
       if (!token) throw new Error('登录响应缺少 token')
       setToken(token)

@@ -9,6 +9,7 @@ import {
   getGithubOAuthUsage,
   getUserInfo,
 } from '@/api/user'
+import { getApiMessage } from '@/utils/apiMessage'
 import './Auth.css'
 
 type Provider = 'github' | 'discord'
@@ -34,11 +35,11 @@ export default function OAuthCallback({ provider }: { provider: Provider }) {
       try {
         if (provider === 'github') {
           const usageRes = await getGithubOAuthUsage(state)
-          if (usageRes.code !== 0) throw new Error(usageRes.msg || '无效的授权状态')
+          if (usageRes.code !== 0) throw new Error(getApiMessage(usageRes, '无效的授权状态'))
 
           if (usageRes.data === 'login') {
             const loginRes = await completeGithubLogin(code, state)
-            if (loginRes.code !== 0) throw new Error(loginRes.msg || 'GitHub 登录失败')
+            if (loginRes.code !== 0) throw new Error(getApiMessage(loginRes, 'GitHub 登录失败'))
             setToken(loginRes.data)
             const info = await getUserInfo()
             if (info.code === 0) setUser(info.data)
@@ -47,10 +48,10 @@ export default function OAuthCallback({ provider }: { provider: Provider }) {
           }
 
           const bindRes = await completeGithubBind(code, state)
-          if (bindRes.code !== 0) throw new Error(bindRes.msg || 'GitHub 绑定失败')
+          if (bindRes.code !== 0) throw new Error(getApiMessage(bindRes, 'GitHub 绑定失败'))
         } else {
           const bindRes = await completeDiscordBind(code)
-          if (bindRes.code !== 0) throw new Error(bindRes.msg || 'Discord 绑定失败')
+          if (bindRes.code !== 0) throw new Error(getApiMessage(bindRes, 'Discord 绑定失败'))
         }
 
         const info = await getUserInfo()

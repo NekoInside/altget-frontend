@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { resetPassword } from '@/api/user'
 import { createSrpRegistration } from '@/utils/srp'
+import { getApiMessage } from '@/utils/apiMessage'
 import './Auth.css'
 
 const isValidPassword = (password: string) =>
@@ -45,7 +46,7 @@ export default function ResetPassword() {
       if (res.code === 0) {
         setSuccess(true)
       } else {
-        setError(res.msg || '重置密码失败')
+        setError(getApiMessage(res, '重置密码失败'))
       }
     } catch {
       setError('网络错误，请稍后重试')

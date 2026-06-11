@@ -1,6 +1,6 @@
 import { createVerifierAndSalt, SRPClientSession, SRPParameters, SRPRoutines } from 'tssrp6a'
 
-const routines = new SRPRoutines(new SRPParameters(undefined, SRPParameters.H['SHA-256']))
+const routines = new SRPRoutines(new SRPParameters(undefined, SRPParameters.H.SHA256))
 
 const toHex = (value: bigint) => value.toString(16)
 const fromHex = (value: string) => BigInt(`0x${value}`)

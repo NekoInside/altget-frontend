@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { forgotPassword } from '@/api/user'
+import { getApiMessage } from '@/utils/apiMessage'
 import './Auth.css'
 
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
@@ -63,7 +64,7 @@ export default function ForgotPassword() {
       if (data.code === 0) {
         setSent(true)
       } else {
-        setError(data.msg || '发送失败')
+        setError(getApiMessage(data, '发送失败'))
       }
     } catch {
       setError('网络错误')

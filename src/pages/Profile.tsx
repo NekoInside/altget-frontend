@@ -7,6 +7,7 @@ import { getApiKeyInfo, generateNewApiKey } from '@/api/apikey'
 import { listPasskeys, deletePasskey, getPasskeyRegisterOptions, verifyPasskeyRegister } from '@/api/misc'
 import { getPowTask } from '@/services/pow'
 import { parseRegistrationCreationOptions, serializeRegistrationCredential } from '@/utils/webauthn'
+import { getApiMessage } from '@/utils/apiMessage'
 import { Navigate } from 'react-router-dom'
 import './Profile.css'
 
@@ -218,7 +219,7 @@ function ApiKeyTab() {
       if (res.code === 0) {
         setInfo(res.data)
       } else {
-        setErr(res.msg)
+        setErr(getApiMessage(res, '生成失败'))
       }
     } catch {
       setErr('请求失败')
@@ -268,9 +269,9 @@ function ApiKeyTab() {
       <hr className="divider" />
       <h4 className="section-subtitle">使用说明</h4>
       <div className="code-block">
-        <pre className="mono">{`GET /api/uf/get\nHeader: x-ciallo: {你的 API Key}\n\nGET /api/uf/paid-get?amount=数量\nHeader: x-ciallo: {你的 API Key}`}</pre>
+        <pre className="mono">{`GET /api/alt?userApiKey={你的 API Key}\n\nGET /api/alt?userApiKey={你的 API Key}&paid=true&count=数量`}</pre>
       </div>
-      <p className="section-desc">返回格式：<code className="mono">username----password</code></p>
+      <p className="section-desc">免费调用仅支持默认单条返回；付费调用可通过 <code className="mono">count</code> 批量获取。返回数据为字符串数组，每项格式为 <code className="mono">username----password</code>。</p>
     </motion.div>
   )
 }
@@ -348,15 +349,23 @@ function CoinsTab({ user }: { user: UserInfo }) {
 
     setRedeeming(true)
     setMsg(null)
+    const prevBalance = balance
     try {
       const res = await redeemTokenAPI(redeemToken.trim())
       if (res.code === 0) {
-        setBalance(res.data.balance)
         setRedeemToken('')
-        setMsg({ type: 'ok', text: `兑换成功！获得 ${res.data.balance - balance} coins` })
+        // Refresh balance after successful redemption
+        const balRes = await getCoinBalance()
+        if (balRes.code === 0) {
+          setBalance(balRes.data.balance)
+          const gained = balRes.data.balance - prevBalance
+          setMsg({ type: 'ok', text: `兑换成功！获得 ${gained} coins` })
+        } else {
+          setMsg({ type: 'ok', text: '兑换成功！' })
+        }
         await loadData()
       } else {
-        setMsg({ type: 'err', text: res.msg || '兑换失败' })
+        setMsg({ type: 'err', text: getApiMessage(res, '兑换失败') })
       }
     } catch (e) {
       setMsg({ type: 'err', text: '兑换请求失败' })
@@ -395,7 +404,7 @@ function CoinsTab({ user }: { user: UserInfo }) {
         setMsg({ type: 'ok', text: `转账成功！已向 ${recipient} 转账 ${amount} coins` })
         await loadData()
       } else {
-        setMsg({ type: 'err', text: res.msg || '转账失败' })
+        setMsg({ type: 'err', text: getApiMessage(res, '转账失败') })
       }
     } catch (e) {
       setMsg({ type: 'err', text: '转账请求失败' })
@@ -645,7 +654,7 @@ function SecurityTab({ user }: { user: UserInfoDef }) {
       if (r.code === 0) {
         setPasskeys(r.data ?? [])
       } else {
-        setPasskeyMsg({ type: 'err', text: r.msg || '加载 Passkey 列表失败' })
+        setPasskeyMsg({ type: 'err', text: getApiMessage(r, '加载 Passkey 列表失败') })
       }
     } finally {
       setLoading(false)
@@ -666,7 +675,7 @@ function SecurityTab({ user }: { user: UserInfoDef }) {
       if (res.code === 0) {
         setPasskeys(pk => pk.filter(p => p.id !== id))
       } else {
-        setPasskeyMsg({ type: 'err', text: res.msg || '删除 Passkey 失败' })
+        setPasskeyMsg({ type: 'err', text: getApiMessage(res, '删除 Passkey 失败') })
       }
     } finally {
       setDeleting(null)
@@ -683,7 +692,7 @@ function SecurityTab({ user }: { user: UserInfoDef }) {
     setPasskeyMsg(null)
     try {
       const optRes = await getPasskeyRegisterOptions()
-      if (optRes.code !== 0) throw new Error(optRes.msg || '获取 Passkey 注册参数失败')
+      if (optRes.code !== 0) throw new Error(getApiMessage(optRes, '获取 Passkey 注册参数失败'))
 
       const { challengeId, options } = optRes.data
       const creationOptions = parseRegistrationCreationOptions(options)
@@ -694,7 +703,7 @@ function SecurityTab({ user }: { user: UserInfoDef }) {
       }
 
       const res = await verifyPasskeyRegister(challengeId, serializeRegistrationCredential(credential), `${user.username} Passkey`)
-      if (res.code !== 0) throw new Error(res.msg || 'Passkey 注册失败')
+      if (res.code !== 0) throw new Error(getApiMessage(res, 'Passkey 注册失败'))
 
       setPasskeyMsg({ type: 'ok', text: 'Passkey 注册成功' })
       await loadPasskeys()

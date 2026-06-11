@@ -80,13 +80,19 @@ export const completeDiscordBind = (code: string) =>
   apiGet<string>('/social/discord/token', { code })
 
 // ---- Coins ----
-export const getCoinBalance = () => apiGet<CoinBalance>('/user/coins/balance')
+export const getCoinBalance = async (): Promise<ApiResponse<CoinBalance>> => {
+  const res = await apiGet<number>('/coins/me')
+  return {
+    ...res,
+    data: { balance: res.data ?? 0 },
+  }
+}
 
 export const getCoinHistory = (page = 1, size = 20) =>
   apiGet<CoinHistoryResult>('/user/coins/history', { page, size })
 
-export const redeemToken = (token: string): Promise<ApiResponse<CoinBalance>> =>
-  apiPost('/user/redeem-token', { token })
+export const redeemToken = (token: string): Promise<ApiResponse<null>> =>
+  apiGet('/coins/redeem', { token })
 
 export const transferCoins = (recipientUsername: string, amount: number): Promise<ApiResponse<CoinBalance>> =>
   apiPost('/user/coins/transfer', { recipientUsername, amount })

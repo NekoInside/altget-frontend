@@ -16,7 +16,7 @@
   transform: translateX(-50%);
   width: 480px;
   height: 480px;
-  background: radial-gradient(ellipse, rgba(152, 89, 255, 0.12) 0%, transparent 70%);
+  background: radial-gradient(ellipse, var(--accent2-dim) 0%, transparent 70%);
   pointer-events: none;
 }
 
