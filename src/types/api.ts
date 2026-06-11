@@ -81,11 +81,6 @@ export interface PasskeyItem {
   createdAt: string
 }
 
-// ---------- Convert ----------
-export interface ConvertResult {
-  result: string
-}
-
 // ---------- PoW ----------
 export interface PowTask {
   taskId: string

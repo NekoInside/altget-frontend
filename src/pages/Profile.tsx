@@ -267,11 +267,18 @@ function ApiKeyTab() {
       </button>
 
       <hr className="divider" />
-      <h4 className="section-subtitle">使用说明</h4>
+      <h4 className="section-subtitle">使用说明 — 获取账号</h4>
       <div className="code-block">
         <pre className="mono">{`GET /api/alt?userApiKey={你的 API Key}\n\nGET /api/alt?userApiKey={你的 API Key}&paid=true&count=数量`}</pre>
       </div>
       <p className="section-desc">免费调用仅支持默认单条返回；付费调用可通过 <code className="mono">count</code> 批量获取。返回数据为字符串数组，每项格式为 <code className="mono">username----password</code>。</p>
+
+      <hr className="divider" />
+      <h4 className="section-subtitle">使用说明 — SAuth 转换</h4>
+      <div className="code-block">
+        <pre className="mono">{`GET /api/alt/convert/sauth?userApiKey={你的 API Key}&username={4399用户名}&password={密码}`}</pre>
+      </div>
+      <p className="section-desc">将 4399 账号密码转换为 SAuth Token。返回 <code className="mono">data</code> 字段为 SAuth Token 字符串。</p>
     </motion.div>
   )
 }

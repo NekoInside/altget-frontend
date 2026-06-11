@@ -197,6 +197,8 @@ export default function FetchPanel() {
           </div>
           <p className="api-section-desc">
             在 <a href="/profile">个人中心</a> 申请 API Key，通过 <code className="mono">GET /api/alt?userApiKey=你的Key</code> 获取单个账号；付费批量获取时使用 <code className="mono">GET /api/alt?userApiKey=你的Key&amp;paid=true&amp;count=数量</code>。
+            <br />
+            SAuth 转换：<code className="mono">GET /api/alt/convert/sauth?userApiKey=你的Key&amp;username=4399用户名&amp;password=密码</code>
           </p>
         </div>
       )}
