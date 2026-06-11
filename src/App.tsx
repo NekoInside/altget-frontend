@@ -9,6 +9,7 @@ import ResetPassword from '@/pages/ResetPassword'
 import Activate from '@/pages/Activate'
 import OAuthCallback from '@/pages/OAuthCallback'
 import Profile from '@/pages/Profile'
+import Convert from '@/pages/Convert'
 import { checkSession, getUserInfo } from '@/api/user'
 import { useAuthStore } from '@/store/auth'
 
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/github-callback" element={<OAuthCallback provider="github" />} />
         <Route path="/discord-callback" element={<OAuthCallback provider="discord" />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/convert" element={<Convert />} />
         <Route path="*" element={
           <div className="page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
             <div style={{ fontSize: '4rem', opacity: 0.3 }}>404</div>
