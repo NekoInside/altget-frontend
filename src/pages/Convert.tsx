@@ -156,18 +156,6 @@ export default function Convert() {
             </div>
           </motion.div>
         </div>
-
-        <div className="api-section" style={{ marginTop: '1.5rem' }}>
-          <div className="api-section-header">
-            <span>API Key 接入</span>
-            <a href="/profile" className="btn btn-ghost btn-sm">管理 Key →</a>
-          </div>
-          <p className="api-section-desc">
-            在 <a href="/profile">个人中心</a> 申请 API Key，通过
-            {' '}<code className="mono">GET /api/alt/convert/sauth?userApiKey=你的Key&amp;username=4399用户名&amp;password=密码</code>
-            {' '}调用转换接口，返回 SAuth Token。
-          </p>
-        </div>
       </div>
     </div>
   )
