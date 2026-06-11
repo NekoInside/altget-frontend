@@ -41,6 +41,13 @@ export interface ApiKeyInfo {
   limitTime: number
 }
 
+// ---------- Announcement ----------
+export interface Announcement {
+  id: number
+  type: 1 | 2
+  context: string
+}
+
 // ---------- Passkey ----------
 export interface PasskeyItem {
   id: number

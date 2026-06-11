@@ -18,7 +18,7 @@ export const verifyPasskeyRegister = (challengeId: string, credential: string, n
   apiPost<null>('/auth/passkey/register/verify', { challengeId, credential, name: name ?? 'My Passkey' })
 
 export const getPasskeyLoginOptions = (username?: string) =>
-  apiPost<{ challengeId: string; options: unknown }>('/auth/passkey/login/options', username ? { username } : {})
+  apiPost<{ challengeId: string; options: string }>('/auth/passkey/login/options', username ? { username } : {})
 
 export const verifyPasskeyLogin = (challengeId: string, credential: string) =>
   apiPost<string>('/auth/passkey/login/verify', { challengeId, credential })

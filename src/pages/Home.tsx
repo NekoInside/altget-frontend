@@ -2,6 +2,12 @@ import { motion } from 'framer-motion'
 import FetchPanel from '@/components/FetchPanel'
 import './Home.css'
 
+export interface ToastItem {
+  id: number
+  type: 1 | 2
+  context: string
+}
+
 export default function Home() {
   return (
     <div className="home-page page">
