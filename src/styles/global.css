@@ -130,6 +130,8 @@ body::after {
 #main-content {
   flex: 1;
   padding-top: 4.2rem;
+  display: flex;
+  flex-direction: column;
 }
 
 a { color: var(--accent); text-decoration: none; transition: color var(--transition); }
@@ -270,8 +272,9 @@ button, input, textarea, select {
 
 /* ─── Page layout ─────────────────────────────────────────── */
 .page {
-  min-height: 100vh;
-  padding-top: 4.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .container {
