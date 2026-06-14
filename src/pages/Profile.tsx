@@ -8,6 +8,7 @@ import { listPasskeys, deletePasskey, getPasskeyRegisterOptions, verifyPasskeyRe
 import { getPowTask } from '@/services/pow'
 import { parseRegistrationCreationOptions, serializeRegistrationCredential } from '@/utils/webauthn'
 import { getApiMessage } from '@/utils/apiMessage'
+import { trackEvent } from '@/utils/tracker'
 import { Navigate } from 'react-router-dom'
 import './Profile.css'
 
@@ -76,7 +77,10 @@ export default function Profile() {
             <button
               key={t.key}
               className={`profile-tab ${tab === t.key ? 'profile-tab--active' : ''}`}
-              onClick={() => setTab(t.key)}
+              onClick={() => {
+                setTab(t.key)
+                trackEvent('profile_tab_switch', { tab: t.key })
+              }}
             >
               {t.label}
               {tab === t.key && <motion.span className="profile-tab-bar" layoutId="ptab" />}
@@ -127,7 +131,7 @@ function OverviewTab({ user }: { user: UserInfoDef }) {
               <div className="social-binding-status">{s.bound ? '已绑定' : '未绑定'}</div>
             </div>
             {!s.bound && (
-              <a href={s.href} className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }}>
+              <a href={s.href} className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} data-umami-event="profile_social_bind" data-umami-event-provider={s.key}>
                 绑定
               </a>
             )}
@@ -198,6 +202,7 @@ function ApiKeyTab() {
     setErr(null)
     setGenLoading(true)
     captchaResRef.current = null
+    trackEvent('profile_apikey_generate_attempt')
     if (typeof initGeetest4 === 'undefined') {
       setErr('验证码组件未加载，请刷新页面')
       setGenLoading(false)
@@ -217,8 +222,11 @@ function ApiKeyTab() {
       })
       if (res.code === 0) {
         setInfo(res.data)
+        trackEvent('profile_apikey_generate_success')
       } else {
-        setErr(getApiMessage(res, '生成失败'))
+        const errMsg = getApiMessage(res, '生成失败')
+        setErr(errMsg)
+        trackEvent('profile_apikey_generate_error', { error: errMsg })
       }
     } catch {
       setErr('请求失败')
@@ -333,6 +341,7 @@ function CoinsTab({ user }: { user: UserInfo }) {
 
     setRedeeming(true)
     setMsg(null)
+    trackEvent('profile_coin_redeem_attempt')
     const prevBalance = balance
     try {
       const res = await redeemTokenAPI(redeemToken.trim())
@@ -344,12 +353,16 @@ function CoinsTab({ user }: { user: UserInfo }) {
           setBalance(balRes.data.balance)
           const gained = balRes.data.balance - prevBalance
           setMsg({ type: 'ok', text: `兑换成功！获得 ${gained} coins` })
+          trackEvent('profile_coin_redeem_success', { gained })
         } else {
           setMsg({ type: 'ok', text: '兑换成功！' })
+          trackEvent('profile_coin_redeem_success')
         }
         await loadData()
       } else {
-        setMsg({ type: 'err', text: getApiMessage(res, '兑换失败') })
+        const errMsg = getApiMessage(res, '兑换失败')
+        setMsg({ type: 'err', text: errMsg })
+        trackEvent('profile_coin_redeem_error', { error: errMsg })
       }
     } catch (e) {
       setMsg({ type: 'err', text: '兑换请求失败' })
@@ -379,6 +392,7 @@ function CoinsTab({ user }: { user: UserInfo }) {
 
     setTransferring(true)
     setMsg(null)
+    trackEvent('profile_coin_transfer_attempt', { amount, recipient: recipient.trim() })
     try {
       const res = await transferCoins(recipient.trim(), amount)
       if (res.code === 0) {
@@ -388,8 +402,11 @@ function CoinsTab({ user }: { user: UserInfo }) {
         const balRes = await getCoinBalance()
         if (balRes.code === 0) setBalance(balRes.data.balance)
         setMsg({ type: 'ok', text: `转账成功！已向 ${recipient} 转账 ${amount} coins` })
+        trackEvent('profile_coin_transfer_success', { amount, recipient: recipient.trim() })
       } else {
-        setMsg({ type: 'err', text: getApiMessage(res, '转账失败') })
+        const errMsg = getApiMessage(res, '转账失败')
+        setMsg({ type: 'err', text: errMsg })
+        trackEvent('profile_coin_transfer_error', { error: errMsg, recipient: recipient.trim() })
       }
     } catch (e) {
       setMsg({ type: 'err', text: '转账请求失败' })
@@ -548,12 +565,16 @@ function SecurityTab({ user }: { user: UserInfoDef }) {
     if (!confirm('确定删除此 Passkey？')) return
     setDeleting(id)
     setPasskeyMsg(null)
+    trackEvent('profile_passkey_delete_attempt')
     try {
       const res = await deletePasskey(id)
       if (res.code === 0) {
         setPasskeys(pk => pk.filter(p => p.id !== id))
+        trackEvent('profile_passkey_delete_success')
       } else {
-        setPasskeyMsg({ type: 'err', text: getApiMessage(res, '删除 Passkey 失败') })
+        const errMsg = getApiMessage(res, '删除 Passkey 失败')
+        setPasskeyMsg({ type: 'err', text: errMsg })
+        trackEvent('profile_passkey_delete_error', { error: errMsg })
       }
     } finally {
       setDeleting(null)
@@ -568,6 +589,7 @@ function SecurityTab({ user }: { user: UserInfoDef }) {
 
     setRegistering(true)
     setPasskeyMsg(null)
+    trackEvent('profile_passkey_register_attempt')
     try {
       const optRes = await getPasskeyRegisterOptions()
       if (optRes.code !== 0) throw new Error(getApiMessage(optRes, '获取 Passkey 注册参数失败'))
@@ -584,14 +606,19 @@ function SecurityTab({ user }: { user: UserInfoDef }) {
       if (res.code !== 0) throw new Error(getApiMessage(res, 'Passkey 注册失败'))
 
       setPasskeyMsg({ type: 'ok', text: 'Passkey 注册成功' })
+      trackEvent('profile_passkey_register_success')
       await loadPasskeys()
     } catch (e: unknown) {
       const err = e as Error
+      let errMsg: string
       if (err.name === 'NotAllowedError') {
-        setPasskeyMsg({ type: 'err', text: 'Passkey 注册已取消或超时' })
+        errMsg = 'Passkey 注册已取消或超时'
+        setPasskeyMsg({ type: 'err', text: errMsg })
       } else {
-        setPasskeyMsg({ type: 'err', text: err.message || 'Passkey 注册失败' })
+        errMsg = err.message || 'Passkey 注册失败'
+        setPasskeyMsg({ type: 'err', text: errMsg })
       }
+      trackEvent('profile_passkey_register_error', { error: errMsg })
     } finally {
       setRegistering(false)
     }

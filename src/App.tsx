@@ -33,6 +33,7 @@ export default function App() {
     <BrowserRouter>
       <AppInit />
       <Navbar />
+      <main id="main-content">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -52,6 +53,7 @@ export default function App() {
           </div>
         } />
       </Routes>
+      </main>
     </BrowserRouter>
   )
 }

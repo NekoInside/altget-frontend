@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/auth'
 import { convertSauth } from '@/api/misc'
 import { getApiMessage } from '@/utils/apiMessage'
+import { trackEvent } from '@/utils/tracker'
 import './Convert.css'
 
 export default function Convert() {
@@ -34,15 +35,21 @@ export default function Convert() {
     setError(null)
     setResult(null)
     setLoading(true)
+    trackEvent('convert_submit')
     try {
       const res = await convertSauth(form.username, form.password)
       if (res.code === 0) {
         setResult(res.data)
+        trackEvent('convert_success')
       } else {
-        setError(getApiMessage(res, '转换失败'))
+        const errMsg = getApiMessage(res, '转换失败')
+        setError(errMsg)
+        trackEvent('convert_error', { error: errMsg })
       }
     } catch {
-      setError('网络错误，请稍后重试')
+      const errMsg = '网络错误，请稍后重试'
+      setError(errMsg)
+      trackEvent('convert_error', { error: errMsg })
     } finally {
       setLoading(false)
     }

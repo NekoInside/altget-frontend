@@ -7,6 +7,7 @@ import { getPasskeyLoginOptions, verifyPasskeyLogin } from '@/api/misc'
 import { createSrpLoginProof, extractToken } from '@/utils/srp'
 import { bufferToBase64url, parseAuthenticationRequestOptions } from '@/utils/webauthn'
 import { getApiMessage } from '@/utils/apiMessage'
+import { trackEvent } from '@/utils/tracker'
 import './Auth.css'
 
 export default function Login() {
@@ -73,6 +74,7 @@ export default function Login() {
     const token = extractToken(res.data)
     if (!token) throw new Error('登录响应缺少 token')
     setToken(token)
+    trackEvent('login_success', { method: 'passkey' })
     await afterLogin()
   }
 
@@ -80,6 +82,7 @@ export default function Login() {
     abortRef.current?.abort()
     setPasskeyLoading(true)
     setError(null)
+    trackEvent('login_passkey_attempt')
     try {
       const optRes = await getPasskeyLoginOptions()
       if (optRes.code !== 0) throw new Error(getApiMessage(optRes, '通行密钥登录失败'))
@@ -90,8 +93,14 @@ export default function Login() {
       await completePasskeyLogin(challengeId, credential)
     } catch (e: unknown) {
       const err = e as Error
-      if (err.name === 'NotAllowedError') setError('操作已取消')
-      else setError(err.message || '通行密钥登录失败')
+      if (err.name === 'NotAllowedError') {
+        setError('操作已取消')
+        trackEvent('login_passkey_error', { error: 'cancelled' })
+      } else {
+        const errMsg = err.message || '通行密钥登录失败'
+        setError(errMsg)
+        trackEvent('login_passkey_error', { error: errMsg })
+      }
     } finally {
       setPasskeyLoading(false)
       startConditionalUI()
@@ -109,6 +118,7 @@ export default function Login() {
     abortRef.current?.abort()
     setError(null)
     setLoading(true)
+    trackEvent('login_submit')
 
     try {
       const challenge = await getPasswordChallenge(username)
@@ -119,9 +129,12 @@ export default function Login() {
       const token = extractToken(data.data)
       if (!token) throw new Error('登录响应缺少 token')
       setToken(token)
+      trackEvent('login_success', { method: 'password' })
       await afterLogin()
     } catch (err: unknown) {
-      setError((err as Error).message || '登录失败')
+      const errMsg = (err as Error).message || '登录失败'
+      setError(errMsg)
+      trackEvent('login_error', { method: 'password', error: errMsg })
     } finally {
       setLoading(false)
     }
@@ -183,7 +196,7 @@ export default function Login() {
         <div className="auth-divider"><span>或使用</span></div>
 
         <div className="social-btns">
-          <a href={LOGIN_GITHUB_URL} className="btn btn-ghost social-btn">
+          <a href={LOGIN_GITHUB_URL} className="btn btn-ghost social-btn" data-umami-event="social_login_click" data-umami-event-provider="github">
             <GithubIcon /> GitHub 登录
           </a>
           {passkeySupported && (

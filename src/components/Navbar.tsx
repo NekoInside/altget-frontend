@@ -11,6 +11,7 @@ import {
   saveThemeSelection,
   type ThemeSelection,
 } from '@/utils/theme'
+import { trackEvent } from '@/utils/tracker'
 import './Navbar.css'
 
 export default function Navbar() {
@@ -66,12 +67,14 @@ export default function Navbar() {
     setUser(null)
     setMobileMenuOpen(false)
     navigate('/')
+    trackEvent('logout')
   }
 
   const handleThemeChange = (selection: ThemeSelection) => {
     setThemeSelection(selection)
     applyThemeColor(resolveThemeColor(selection))
     saveThemeSelection(selection)
+    trackEvent('theme_change', { type: selection.type, value: selection.type === 'preset' ? selection.key : selection.value })
   }
 
   const toggleThemeOpen = () => {
@@ -102,7 +105,7 @@ export default function Navbar() {
     >
       <div className="navbar-inner container-wide">
         <Link to="/" className="navbar-brand">
-          <img className="brand-image" src="/origin-brand.jfif" alt="凌清阁" />
+          <img className="brand-image" src="/origin-brand.jfif" alt="凌清阁" loading="lazy" />
           <span className="brand-text">凌清阁-小号获取</span>
         </Link>
 
@@ -263,7 +266,7 @@ function isActive(pathname: string, path: string) {
 
 function NavLink({ to, active, children }: { to: string; active: boolean; children: React.ReactNode }) {
   return (
-    <Link to={to} className={`nav-link ${active ? 'nav-link--active' : ''}`}>
+    <Link to={to} className={`nav-link ${active ? 'nav-link--active' : ''}`} onClick={() => trackEvent('nav_click', { page: to })}>
       {children}
     </Link>
   )

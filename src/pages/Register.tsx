@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { register } from '@/api/user'
 import { createSrpRegistration } from '@/utils/srp'
 import { getApiMessage } from '@/utils/apiMessage'
+import { trackEvent } from '@/utils/tracker'
 import './Auth.css'
 
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
@@ -42,6 +43,7 @@ export default function Register() {
     if (err) return setError(err)
     setError(null)
     setLoading(true)
+    trackEvent('register_submit')
 
     // Load geetest if not already loaded
     if (typeof initGeetest4 === 'undefined') {
@@ -93,8 +95,11 @@ export default function Register() {
       })
       if (data.code === 0) {
         setSuccess(true)
+        trackEvent('register_success')
       } else {
-        setError(getApiMessage(data, '注册失败'))
+        const errMsg = getApiMessage(data, '注册失败')
+        setError(errMsg)
+        trackEvent('register_error', { error: errMsg })
       }
     } catch {
       setError('网络错误，请稍后重试')
@@ -112,7 +117,7 @@ export default function Register() {
             <div className="auth-success-icon">✉️</div>
             <h2 className="auth-title">验证邮件已发送</h2>
             <p>请检查你的 QQ 邮箱，点击激活链接完成注册（有效期 10 分钟）。</p>
-            <Link to="/login" className="btn btn-primary" style={{ marginTop: '1.5rem' }}>前往登录</Link>
+            <Link to="/login" className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => trackEvent('register_go_login')}>前往登录</Link>
           </div>
         </motion.div>
       </div>

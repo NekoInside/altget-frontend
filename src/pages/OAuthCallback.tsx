@@ -10,6 +10,7 @@ import {
   getUserInfo,
 } from '@/api/user'
 import { getApiMessage } from '@/utils/apiMessage'
+import { trackEvent } from '@/utils/tracker'
 import './Auth.css'
 
 type Provider = 'github' | 'discord'
@@ -33,6 +34,7 @@ export default function OAuthCallback({ provider }: { provider: Provider }) {
 
     const run = async () => {
       try {
+        trackEvent('oauth_callback', { provider, action: 'start' })
         if (provider === 'github') {
           const usageRes = await getGithubOAuthUsage(state)
           if (usageRes.code !== 0) throw new Error(getApiMessage(usageRes, '无效的授权状态'))
@@ -43,6 +45,7 @@ export default function OAuthCallback({ provider }: { provider: Provider }) {
             setToken(loginRes.data)
             const info = await getUserInfo()
             if (info.code === 0) setUser(info.data)
+            trackEvent('oauth_callback', { provider, action: 'login_success' })
             navigate('/', { replace: true })
             return
           }
@@ -56,12 +59,15 @@ export default function OAuthCallback({ provider }: { provider: Provider }) {
 
         const info = await getUserInfo()
         if (info.code === 0) setUser(info.data)
+        trackEvent('oauth_callback', { provider, action: 'bind_success' })
         setMessage('绑定成功')
         setStatus('ok')
         window.setTimeout(() => navigate('/profile', { replace: true }), 800)
       } catch (err) {
-        setMessage((err as Error).message || '授权失败，请稍后重试。')
+        const errMsg = (err as Error).message || '授权失败，请稍后重试。'
+        setMessage(errMsg)
         setStatus('err')
+        trackEvent('oauth_callback', { provider, action: 'error', error: errMsg })
       }
     }
 

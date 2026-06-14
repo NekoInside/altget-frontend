@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { apiGet } from '@/api/http'
 import { getPowTask } from '@/services/pow'
 import { getApiMessage } from '@/utils/apiMessage'
+import { trackEvent } from '@/utils/tracker'
 import './FetchPanel.css'
 
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
@@ -38,24 +39,29 @@ export default function FetchPanel() {
         channel,
       }
       const res = await apiGet<string>('/alt', params)
-      if (res.code !== 0) throw new Error(getApiMessage(res, '获取失败'))
+      if (res.code !== 0) {
+        const errMsg = getApiMessage(res, '获取失败')
+        trackEvent('fetch_account_error', { error: errMsg, channel })
+        throw new Error(errMsg)
+      }
       const [username, password] = (res.data as string).split('----')
       setResult({ username, password })
+      trackEvent('fetch_account_success', { channel })
     } catch (e: unknown) {
-      setError((e as Error).message || '获取失败，请重试')
+      const errMsg = (e as Error).message || '获取失败，请重试'
+      setError(errMsg)
+      trackEvent('fetch_account_error', { error: errMsg })
     } finally {
       setLoading(false)
       pendingFetchRef.current = false
     }
   }, [])
 
-  // When showCaptcha turns true, init geetest
+  // Dynamically load gt4.js then init geetest when captcha is needed
   useEffect(() => {
     if (!showCaptcha) return
-    const interval = setInterval(() => {
-      const el = document.getElementById('gt-fetch-container')
-      if (!el) return
-      clearInterval(interval)
+
+    const initGeetest = () => {
       if (typeof initGeetest4 === 'undefined') {
         setShowCaptcha(false)
         setError('验证码组件未加载，请刷新页面')
@@ -78,6 +84,31 @@ export default function FetchPanel() {
           doFetch(captchaId, captchaOutput, genTime, lotNumber, passToken)
         })
       })
+    }
+
+    // Load gt4.js dynamically if not already loaded
+    if (typeof initGeetest4 === 'undefined') {
+      const script = document.createElement('script')
+      script.src = '/gt4.js'
+      script.async = true
+      script.onload = () => {
+        // Wait for DOM container then init
+        const checkContainer = setInterval(() => {
+          const el = document.getElementById('gt-fetch-container')
+          if (!el) return
+          clearInterval(checkContainer)
+          initGeetest()
+        }, 200)
+      }
+      document.body.appendChild(script)
+      return () => { /* cleanup handled by component unmount */ }
+    }
+
+    const interval = setInterval(() => {
+      const el = document.getElementById('gt-fetch-container')
+      if (!el) return
+      clearInterval(interval)
+      initGeetest()
     }, 200)
     return () => clearInterval(interval)
   }, [showCaptcha, doFetch])
@@ -89,6 +120,7 @@ export default function FetchPanel() {
     setResult(null)
     captchaResRef.current = null
     pendingFetchRef.current = true
+    trackEvent('fetch_account_start')
 
     // Check if captcha can be bypassed
     try {
@@ -118,10 +150,10 @@ export default function FetchPanel() {
         <h2 className="fetch-panel-title">获取账号</h2>
         <p className="fetch-panel-sub">点击按钮获取一个可用的 4399 小号</p>
         <div className="fetch-panel-links" aria-label="社区链接">
-          <a href="https://qm.qq.com/q/XLBiA8NdW6" target="_blank" rel="noreferrer noopener">
+          <a href="https://qm.qq.com/q/XLBiA8NdW6" target="_blank" rel="noreferrer noopener" data-umami-event="community_link_click" data-umami-event-platform="qq">
             QQ群
           </a>
-          <a href="https://discord.gg/W3Dn3tk96s" target="_blank" rel="noreferrer noopener">
+          <a href="https://discord.gg/W3Dn3tk96s" target="_blank" rel="noreferrer noopener" data-umami-event="community_link_click" data-umami-event-platform="discord">
             Discord
           </a>
         </div>

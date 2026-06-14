@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://4399.nekoinsi.de/sitemap.xml

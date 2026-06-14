@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+/* Fonts are loaded via <link> in index.html with display=swap for FOUT mitigation */
 
 /* ─── Design Tokens ───────────────────────────────────────── */
 :root {
@@ -72,6 +72,8 @@ body {
   background-repeat: repeat;
   background-size: cover;
   background-attachment: fixed;
+  /* Reduce painted area for background: only paint visible tiles */
+  image-rendering: auto;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 15px;
@@ -267,7 +269,6 @@ button, input, textarea, select {
 }
 
 /* ─── Loading spinner ─────────────────────────────────────── */
-@keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
   display: inline-block;
   width: 15px;
@@ -326,6 +327,7 @@ td {
 tr:hover td { background: var(--glass); }
 
 /* ─── Animations ──────────────────────────────────────────── */
+/* Use only compositable properties (opacity, transform) for smooth 60fps */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -334,9 +336,10 @@ tr:hover td { background: var(--glass); }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 2px 14px var(--accent-glow); }
-  50%       { box-shadow: 0 4px 28px var(--accent-glow), 0 0 40px hsla(var(--theme-h), var(--theme-s), var(--theme-l), 0.2); }
+  50%       { box-shadow: 0 4px 28px var(--accent-glow); }
 }
 
 .anim-fade-up { animation: fadeUp 0.38s ease both; }

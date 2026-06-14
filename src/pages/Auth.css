@@ -28,6 +28,7 @@
   z-index: 1;
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
+  will-change: transform;
 }
 
 .auth-logo {

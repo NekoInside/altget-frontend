@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { activateAccount } from '@/api/user'
 import { getApiMessage } from '@/utils/apiMessage'
+import { trackEvent } from '@/utils/tracker'
 import './Auth.css'
 
 export default function Activate() {
@@ -21,14 +22,19 @@ export default function Activate() {
       .then(data => {
         if (data.code === 0) {
           setStatus('ok')
+          trackEvent('account_activate_success')
         } else {
-          setErrMsg(getApiMessage(data, '激活失败，链接可能已过期。'))
+          const errMsg = getApiMessage(data, '激活失败，链接可能已过期。')
+          setErrMsg(errMsg)
           setStatus('err')
+          trackEvent('account_activate_error', { error: errMsg })
         }
       })
       .catch(() => {
-        setErrMsg('网络错误，请稍后重试。')
+        const errMsg = '网络错误，请稍后重试。'
+        setErrMsg(errMsg)
         setStatus('err')
+        trackEvent('account_activate_error', { error: errMsg })
       })
   }, [token])
 
@@ -51,7 +57,7 @@ export default function Activate() {
             <div className="auth-logo">✓</div>
             <h1 className="auth-title">激活成功</h1>
             <p className="auth-sub">你的账号已激活，现在可以登录了。</p>
-            <Link to="/login" className="btn btn-primary auth-submit" style={{ marginTop: '1.5rem' }}>
+            <Link to="/login" className="btn btn-primary auth-submit" style={{ marginTop: '1.5rem' }} onClick={() => trackEvent('activate_go_login')}>
               前往登录
             </Link>
           </>

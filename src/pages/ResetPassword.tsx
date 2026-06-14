@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { resetPassword } from '@/api/user'
 import { createSrpRegistration } from '@/utils/srp'
 import { getApiMessage } from '@/utils/apiMessage'
+import { trackEvent } from '@/utils/tracker'
 import './Auth.css'
 
 const isValidPassword = (password: string) =>
@@ -40,16 +41,22 @@ export default function ResetPassword() {
     }
 
     setLoading(true)
+    trackEvent('password_reset_submit')
     try {
       const { salt, verifier } = await createSrpRegistration(username.trim(), password)
       const res = await resetPassword(token, salt, verifier)
       if (res.code === 0) {
         setSuccess(true)
+        trackEvent('password_reset_success')
       } else {
-        setError(getApiMessage(res, '重置密码失败'))
+        const errMsg = getApiMessage(res, '重置密码失败')
+        setError(errMsg)
+        trackEvent('password_reset_error', { error: errMsg })
       }
     } catch {
-      setError('网络错误，请稍后重试')
+      const errMsg = '网络错误，请稍后重试'
+      setError(errMsg)
+      trackEvent('password_reset_error', { error: errMsg })
     } finally {
       setLoading(false)
     }

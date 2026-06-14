@@ -16,4 +16,5 @@
   padding: 2rem 1.75rem;
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
+  will-change: transform;
 }

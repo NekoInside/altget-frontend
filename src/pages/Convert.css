@@ -28,11 +28,13 @@
   gap: 0.85rem;
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
+  will-change: transform;
 }
 
 .convert-form-card {
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
+  will-change: transform;
 }
 
 /* Empty state */

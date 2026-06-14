@@ -21,13 +21,24 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    cssMinify: 'esbuild',
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           motion: ['framer-motion'],
         },
+        assetFileNames: (assetInfo) => {
+          const name = assetInfo.name ?? ''
+          if (/\.css$/.test(name)) return 'assets/[name]-[hash].[ext]'
+          if (/\.(png|jpe?g|gif|svg|webp|ico)$/.test(name)) return 'assets/img/[name]-[hash].[ext]'
+          if (/\.(woff2?|eot|ttf|otf)$/.test(name)) return 'assets/fonts/[name]-[hash].[ext]'
+          return 'assets/[name]-[hash].[ext]'
+        },
       },
     },
+    target: 'es2020',
+    cssCodeSplit: false,
   },
 })

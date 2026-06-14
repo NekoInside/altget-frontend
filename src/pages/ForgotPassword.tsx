@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { forgotPassword } from '@/api/user'
 import { getApiMessage } from '@/utils/apiMessage'
+import { trackEvent } from '@/utils/tracker'
 import './Auth.css'
 
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
@@ -21,6 +22,7 @@ export default function ForgotPassword() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+    trackEvent('forgot_password_submit')
     if (typeof initGeetest4 === 'undefined') {
       setError('验证码组件未加载，请刷新页面')
       setLoading(false)
@@ -63,8 +65,11 @@ export default function ForgotPassword() {
       })
       if (data.code === 0) {
         setSent(true)
+        trackEvent('forgot_password_success')
       } else {
-        setError(getApiMessage(data, '发送失败'))
+        const errMsg = getApiMessage(data, '发送失败')
+        setError(errMsg)
+        trackEvent('forgot_password_error', { error: errMsg })
       }
     } catch {
       setError('网络错误')
