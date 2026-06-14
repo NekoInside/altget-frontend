@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
@@ -54,6 +55,7 @@ export default function App() {
         } />
       </Routes>
       </main>
+      <Footer />
     </BrowserRouter>
   )
 }

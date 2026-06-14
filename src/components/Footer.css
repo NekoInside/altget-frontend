@@ -1,0 +1,120 @@
+/* ─── Footer ──────────────────────────────────────────── */
+.footer {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  background: var(--glass-card);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 0.75rem 1.5rem;
+  min-height: 2.8rem;
+  flex-wrap: wrap;
+}
+
+/* ─── Individual build section ────────────────────────── */
+.footer-build {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  cursor: default;
+}
+
+.footer-build--loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.footer-build-label {
+  color: var(--text-3);
+  font-weight: 500;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.footer-build-value {
+  color: var(--text-2);
+  font-size: 0.76rem;
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.footer-build-value:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* ─── Custom tooltip (CSS-powered, no title/alt) ──────── */
+.footer-build-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--popover-ring-bg);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 180ms ease, transform 180ms ease;
+  z-index: 200;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  /* Offset transform for centering — keep non-transformed centering */
+  transform: translateX(-50%) translateY(4px);
+}
+
+/* Arrow */
+.footer-build-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--border-bright);
+}
+
+.footer-build:hover .footer-build-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.footer-build-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.15rem 0;
+}
+
+.footer-build-tooltip-row + .footer-build-tooltip-row {
+  border-top: 1px solid var(--border);
+  margin-top: 0.15rem;
+  padding-top: 0.25rem;
+}
+
+.footer-build-tooltip-label {
+  color: var(--text-3);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  min-width: 6.5rem;
+}
+
+.footer-build-tooltip-value {
+  color: var(--text);
+  font-size: 0.76rem;
+}
