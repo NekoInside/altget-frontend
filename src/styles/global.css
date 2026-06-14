@@ -120,8 +120,16 @@ body::after {
   min-height: 100vh;
 }
 
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 #main-content {
   flex: 1;
+  padding-top: 4.2rem;
 }
 
 a { color: var(--accent); text-decoration: none; transition: color var(--transition); }

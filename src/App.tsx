@@ -32,30 +32,32 @@ function AppInit() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppInit />
-      <Navbar />
-      <main id="main-content">
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/activate" element={<Activate />} />
-        <Route path="/github-callback" element={<OAuthCallback provider="github" />} />
-        <Route path="/discord-callback" element={<OAuthCallback provider="discord" />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/convert" element={<Convert />} />
-        <Route path="*" element={
-          <div className="page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-            <div style={{ fontSize: '4rem', opacity: 0.3 }}>404</div>
-            <p style={{ color: 'var(--text-3)' }}>页面不存在</p>
-            <a href="/" className="btn btn-ghost">返回首页</a>
-          </div>
-        } />
-      </Routes>
-      </main>
-      <Footer />
+      <div className="app-layout">
+        <AppInit />
+        <Navbar />
+        <main id="main-content">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/activate" element={<Activate />} />
+          <Route path="/github-callback" element={<OAuthCallback provider="github" />} />
+          <Route path="/discord-callback" element={<OAuthCallback provider="discord" />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/convert" element={<Convert />} />
+          <Route path="*" element={
+            <div className="page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+              <div style={{ fontSize: '4rem', opacity: 0.3 }}>404</div>
+              <p style={{ color: 'var(--text-3)' }}>页面不存在</p>
+              <a href="/" className="btn btn-ghost">返回首页</a>
+            </div>
+          } />
+        </Routes>
+        </main>
+        <Footer />
+      </div>
     </BrowserRouter>
   )
 }
