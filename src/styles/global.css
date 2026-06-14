@@ -55,6 +55,8 @@
   --glass-hover: rgba(255, 255, 255, 0.09);
   --glass-card:  rgba(15, 15, 25, 0.6);
   --blur:        blur(14px) saturate(1.4);
+  --blur-mobile: blur(5px) saturate(1.15);
+  --blur-nav:    blur(20px) saturate(1.6);
 
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border);
   --glow-sm: 0 0 10px var(--accent-glow);
@@ -106,9 +108,30 @@ body::after {
   z-index: 0;
 }
 
-@media (hover: none) {
+/* ─── Mobile ──────────────────────────────────────────────── */
+@media (hover: none), (max-width: 768px) {
+  :root {
+    --blur: var(--blur-mobile);
+    --blur-nav: blur(10px) saturate(1.3);
+  }
+
   body {
+    /* iOS Safari: background-attachment:fixed + cover 会导致背景缩放错误，
+       此处强制 scroll 避免此问题 */
     background-attachment: scroll;
+    background-size: cover;
+    background-position: center center;
+  }
+
+  /* 遮罩层跟随内容滚动，避免与滚动背景产生视觉脱节 */
+  body::before {
+    position: absolute;
+    min-height: 100%;
+  }
+
+  body::after {
+    position: absolute;
+    min-height: 100%;
   }
 }
 
