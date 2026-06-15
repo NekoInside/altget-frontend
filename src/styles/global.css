@@ -319,6 +319,16 @@ button, input, textarea, select {
   padding: 0 2rem;
 }
 
+@media (max-width: 860px) {
+  .container {
+    padding: 0 1rem;
+  }
+
+  .container-wide {
+    padding: 0 1rem;
+  }
+}
+
 /* ─── Loading spinner ─────────────────────────────────────── */
 .spinner {
   display: inline-block;

@@ -118,3 +118,15 @@
   color: var(--text);
   font-size: 0.76rem;
 }
+
+@media (max-width: 420px) {
+  .footer-inner {
+    gap: 0.75rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .footer-build-tooltip {
+    display: none;
+  }
+}
