@@ -392,6 +392,10 @@
 }
 
 @media (max-width: 860px) {
+  .navbar-links {
+    display: none;
+  }
+
   .brand-text {
     display: none;
   }
@@ -402,10 +406,15 @@
 }
 
 @media (max-width: 640px) {
-  .navbar-links { display: none; }
+  .navbar-inner {
+    gap: 0.5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
   .navbar-username { display: none; }
-  .navbar-actions { gap: 0.5rem; }
-  .theme-trigger { padding: 0.45rem 0.6rem; }
+  .navbar-actions { gap: 0.35rem; }
+  .theme-trigger { padding: 0.35rem 0.5rem; }
   .theme-popover {
     right: -2.8rem;
     width: min(18rem, calc(100vw - 1rem));
@@ -414,5 +423,17 @@
   .navbar-user .btn,
   .navbar-auth {
     display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand-image {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .theme-trigger-dot {
+    width: 0.6rem;
+    height: 0.6rem;
   }
 }
