@@ -57,7 +57,6 @@ export default function FetchPanel() {
     }
   }, [])
 
-  // Dynamically load gt4.js then init geetest when captcha is needed
   useEffect(() => {
     if (!showCaptcha) return
 
@@ -86,22 +85,11 @@ export default function FetchPanel() {
       })
     }
 
-    // Load gt4.js dynamically if not already loaded
     if (typeof initGeetest4 === 'undefined') {
-      const script = document.createElement('script')
-      script.src = '/gt4.js'
-      script.async = true
-      script.onload = () => {
-        // Wait for DOM container then init
-        const checkContainer = setInterval(() => {
-          const el = document.getElementById('gt-fetch-container')
-          if (!el) return
-          clearInterval(checkContainer)
-          initGeetest()
-        }, 200)
-      }
-      document.body.appendChild(script)
-      return () => { /* cleanup handled by component unmount */ }
+      setShowCaptcha(false)
+      setError('验证码组件未加载，请刷新页面')
+      setLoading(false)
+      return
     }
 
     const interval = setInterval(() => {
