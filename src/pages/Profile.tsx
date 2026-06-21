@@ -276,14 +276,14 @@ function ApiKeyTab() {
       <hr className="divider" />
       <h4 className="section-subtitle">使用说明 — 获取账号</h4>
       <div className="code-block">
-        <pre className="mono">{`GET /api/alt?userApiKey={你的 API Key}\n\nGET /api/alt?userApiKey={你的 API Key}&paid=true&count=数量`}</pre>
+        <pre className="mono">{`GET /api/alt\nAuthorization: Ciallo {你的 API Key}\n\nGET /api/alt?paid=true&count=数量\nAuthorization: Ciallo {你的 API Key}`}</pre>
       </div>
       <p className="section-desc">免费调用仅支持默认单条返回；付费调用可通过 <code className="mono">count</code> 批量获取。返回数据为字符串数组，每项格式为 <code className="mono">username----password</code>。</p>
 
       <hr className="divider" />
       <h4 className="section-subtitle">使用说明 — SAuth 转换</h4>
       <div className="code-block">
-        <pre className="mono">{`GET /api/alt/convert/sauth?userApiKey={你的 API Key}&username={4399用户名}&password={密码}\n\nGET /api/alt/convert/gen?userApiKey={你的 API Key}`}</pre>
+        <pre className="mono">{`GET /api/alt/convert/sauth?username={4399用户名}&password={密码}\nAuthorization: Ciallo {你的 API Key}\n\nGET /api/alt/convert/gen\nAuthorization: Ciallo {你的 API Key}`}</pre>
       </div>
       <p className="section-desc"><code className="mono">convert/sauth</code> 将指定账号密码转换为 SAuth Token，返回 <code className="mono">data</code> 为 Token 字符串。<code className="mono">convert/gen</code> 获取一个账号并自动转换，返回 <code className="mono">{"{ username, password, sauth }"}</code>。</p>
     </motion.div>

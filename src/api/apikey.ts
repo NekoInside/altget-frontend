@@ -49,14 +49,14 @@ const fetchAltByApiKey = async (apiKey: string, options?: { paid?: boolean; coun
   return normalizeAltFetchResult(res.data)
 }
 
-// Free API fetch: GET /api/alt?userApiKey={apiKey}
+// Free API fetch: GET /api/alt with Authorization: Ciallo {apiKey}
 // Free calls only allow count=1.
 export const fetchAltWithApiKey = async (apiKey: string): Promise<string> => {
   const result = await fetchAltByApiKey(apiKey)
   return result[0] ?? ''
 }
 
-// Paid API fetch: GET /api/alt?userApiKey={apiKey}&paid=true&count={count}
+// Paid API fetch: GET /api/alt with Authorization: Ciallo {apiKey}
 export const fetchPaidAltWithApiKey = (apiKey: string, count = 1): Promise<string[]> => {
   return fetchAltByApiKey(apiKey, { paid: true, count })
 }
