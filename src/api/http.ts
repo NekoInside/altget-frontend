@@ -11,13 +11,13 @@ const http = axios.create({
 
 export const getAuthHeaders = (): Record<string, string> => {
   const token = getStoredAuthToken()
-  return token ? { Authorization: `Ciallo ${token}` } : {}
+  return token ? { 'X-Ciallo-Auth': token } : {}
 }
 
 http.interceptors.request.use((config) => {
   const token = getStoredAuthToken()
   if (token) {
-    config.headers.Authorization = `Ciallo ${token}`
+    config.headers['X-Ciallo-Auth'] = token
   }
   return config
 })
