@@ -24,6 +24,21 @@
   <body>
     <div id="root"></div>
     <script src="/gt4.js"></script>
+    <script>
+      (function(d, t) {
+        var BASE_URL = 'https://chatwoot.nekoinsi.de'
+        var g = d.createElement(t), s = d.getElementsByTagName(t)[0]
+        g.src = BASE_URL + '/packs/js/sdk.js'
+        g.async = true
+        s.parentNode.insertBefore(g, s)
+        g.onload = function() {
+          window.chatwootSDK.run({
+            websiteToken: 'MoMtFHdh9JkzMhV5iY3Jq4ST',
+            baseUrl: BASE_URL,
+          })
+        }
+      })(document, 'script')
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
