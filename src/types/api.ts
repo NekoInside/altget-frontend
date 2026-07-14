@@ -64,3 +64,24 @@ export interface PowTask {
   isWasmTask: boolean
   createTime: string
 }
+
+// ---------- Used Alts ----------
+export interface UsedAlt {
+  id: number
+  username: string
+  password: string
+  channel: string
+  userId: number
+  operationIp: string
+  fetchMethod: string
+  fetchTime: string
+  createdAt?: string | null
+}
+
+export interface PageResponse<T> {
+  records: T[]
+  total: number
+  size: number
+  current: number
+  pages: number
+}
