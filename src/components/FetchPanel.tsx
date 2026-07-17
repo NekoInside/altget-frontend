@@ -138,6 +138,9 @@ export default function FetchPanel() {
         <h2 className="fetch-panel-title">获取账号</h2>
         <p className="fetch-panel-sub">点击按钮获取一个可用的 4399 小号</p>
         <div className="fetch-panel-links" aria-label="社区链接">
+          <a href="https://qm.qq.com/q/I0zmvUPiYE" target="_blank" rel="noreferrer noopener" data-umami-event="community_link_click" data-umami-event-platform="qq">
+            QQ群
+          </a>
           <a href="https://discord.gg/W3Dn3tk96s" target="_blank" rel="noreferrer noopener" data-umami-event="community_link_click" data-umami-event-platform="discord">
             Discord
           </a>
