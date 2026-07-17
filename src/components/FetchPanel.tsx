@@ -144,6 +144,9 @@ export default function FetchPanel() {
           <a href="https://discord.gg/W3Dn3tk96s" target="_blank" rel="noreferrer noopener" data-umami-event="community_link_click" data-umami-event-platform="discord">
             Discord
           </a>
+          <a href="https://t.me/ln_secret_place" target="_blank" rel="noreferrer noopener" data-umami-event="community_link_click" data-umami-event-platform="telegram">
+            Telegram
+          </a>
         </div>
       </div>
 
