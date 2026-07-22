@@ -19,6 +19,7 @@ export interface UserInfo {
   registerTime: string
   lastLoginTime?: string
   lastUseTime: string | null
+  balance?: number
   coinBalance: number
   githubBound: boolean
   telegramBound: boolean
@@ -29,6 +30,20 @@ export interface UserInfo {
 // ---------- Coins ----------
 export interface CoinBalance {
   balance: number
+}
+
+export type OxaPayRechargeStatus = 'PENDING' | 'CREATE_FAILED' | 'PAID'
+
+export interface OxaPayRecharge {
+  orderId: string
+  trackId: string | null
+  usdAmount: number
+  cnyAmount: number
+  coinAmount: number
+  status: OxaPayRechargeStatus
+  paymentUrl: string | null
+  expiredAt: string | null
+  paidAt: string | null
 }
 
 // ---------- API Key ----------

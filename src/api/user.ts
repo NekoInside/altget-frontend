@@ -9,7 +9,7 @@ const normalizeUserInfo = (user: UserInfo): UserInfo => ({
   username: user.username ?? user.name ?? '',
   registerTime: user.registerTime ?? user.registrationTime ?? '',
   lastUseTime: user.lastUseTime ?? user.lastLoginTime ?? null,
-  coinBalance: user.coinBalance ?? 0,
+  coinBalance: user.coinBalance ?? user.balance ?? 0,
   githubBound: user.githubBound ?? false,
   telegramBound: user.telegramBound ?? false,
   discordBound: user.discordBound ?? false,

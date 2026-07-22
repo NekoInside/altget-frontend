@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/auth'
-import type { UserInfo, ApiKeyInfo, PasskeyItem, CoinBalance } from '@/types/api'
+import type { UserInfo, ApiKeyInfo, PasskeyItem, CoinBalance, OxaPayRecharge } from '@/types/api'
 import { getUserInfo, getCoinBalance, redeemToken as redeemTokenAPI, transferCoins, BIND_GITHUB_URL, BIND_DISCORD_URL } from '@/api/user'
+import { createOxaPayRecharge, getRechargeOrder } from '@/api/recharge'
 import { getApiKeyInfo, generateNewApiKey } from '@/api/apikey'
 import { listPasskeys, deletePasskey, getPasskeyRegisterOptions, verifyPasskeyRegister } from '@/api/misc'
 import { getPowTask } from '@/services/pow'
@@ -13,6 +14,7 @@ import { Navigate } from 'react-router-dom'
 import './Profile.css'
 
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
+const ACTIVE_RECHARGE_KEY = 'altget.activeRechargeOrder'
 
 type UserInfoDef = UserInfo
 
@@ -314,8 +316,15 @@ function CoinsTab({ user }: { user: UserInfo }) {
   const [transferAmount, setTransferAmount] = useState('')
   const [transferring, setTransferring] = useState(false)
 
+  // Recharge Tab
+  const [rechargeAmount, setRechargeAmount] = useState('5.00')
+  const [activeRecharge, setActiveRecharge] = useState<OxaPayRecharge | null>(null)
+  const [creatingRecharge, setCreatingRecharge] = useState(false)
+  const [checkingRecharge, setCheckingRecharge] = useState(false)
+  const settledRechargeIds = useRef(new Set<string>())
+
   // View Tab
-  const [viewTab, setViewTab] = useState<'balance' | 'redeem' | 'transfer'>('balance')
+  const [viewTab, setViewTab] = useState<'balance' | 'recharge' | 'redeem' | 'transfer'>('balance')
 
   const loadData = async () => {
     setLoading(true)
@@ -332,6 +341,54 @@ function CoinsTab({ user }: { user: UserInfo }) {
   useEffect(() => {
     loadData()
   }, [])
+
+  const handlePaidRecharge = async (order: OxaPayRecharge) => {
+    if (settledRechargeIds.current.has(order.orderId)) return
+    settledRechargeIds.current.add(order.orderId)
+    localStorage.removeItem(ACTIVE_RECHARGE_KEY)
+    const balRes = await getCoinBalance()
+    if (balRes.code === 0) setBalance(balRes.data.balance)
+    setMsg({ type: 'ok', text: `充值成功，${order.coinAmount.toLocaleString()} coins 已到账` })
+    trackEvent('profile_coin_recharge_success', { amount: order.usdAmount, coins: order.coinAmount })
+  }
+
+  const refreshRecharge = async (orderId: string, showLoading = true) => {
+    if (showLoading) setCheckingRecharge(true)
+    try {
+      const res = await getRechargeOrder(orderId)
+      if (res.code !== 0) {
+        if (showLoading) setMsg({ type: 'err', text: getApiMessage(res, '查询充值状态失败') })
+        return
+      }
+      setActiveRecharge(res.data)
+      if (res.data.status === 'PAID') await handlePaidRecharge(res.data)
+    } catch {
+      if (showLoading) setMsg({ type: 'err', text: '查询充值状态失败' })
+    } finally {
+      if (showLoading) setCheckingRecharge(false)
+    }
+  }
+
+  useEffect(() => {
+    const orderId = localStorage.getItem(ACTIVE_RECHARGE_KEY)
+    if (orderId) void refreshRecharge(orderId)
+  }, [])
+
+  useEffect(() => {
+    if (!activeRecharge || activeRecharge.status !== 'PENDING') return
+    const expiredAt = activeRecharge.expiredAt ? new Date(activeRecharge.expiredAt).getTime() : null
+    if (expiredAt !== null && expiredAt <= Date.now()) return
+
+    const timer = window.setInterval(() => {
+      if (expiredAt !== null && expiredAt <= Date.now()) {
+        window.clearInterval(timer)
+        setActiveRecharge(current => current ? { ...current } : current)
+        return
+      }
+      void refreshRecharge(activeRecharge.orderId, false)
+    }, 4_000)
+    return () => window.clearInterval(timer)
+  }, [activeRecharge?.orderId, activeRecharge?.status, activeRecharge?.expiredAt])
 
   const handleRedeem = async () => {
     if (!redeemToken.trim()) {
@@ -415,8 +472,57 @@ function CoinsTab({ user }: { user: UserInfo }) {
     }
   }
 
+  const rechargeCents = /^\d+(?:\.\d{1,2})?$/.test(rechargeAmount)
+    ? Math.round(Number(rechargeAmount) * 100)
+    : 0
+  const rechargeExpired = !!activeRecharge?.expiredAt && new Date(activeRecharge.expiredAt).getTime() <= Date.now()
+
+  const handleRecharge = async () => {
+    if (!Number.isSafeInteger(rechargeCents) || rechargeCents < 1) {
+      setMsg({ type: 'err', text: '请输入有效的美元金额，最多保留两位小数' })
+      return
+    }
+
+    setCreatingRecharge(true)
+    setMsg(null)
+    trackEvent('profile_coin_recharge_attempt', { amount: rechargeCents / 100 })
+    const paymentWindow = window.open('about:blank', '_blank')
+    if (paymentWindow) paymentWindow.opener = null
+
+    try {
+      const res = await createOxaPayRecharge(rechargeCents / 100)
+      if (res.code !== 0) {
+        paymentWindow?.close()
+        const errMsg = getApiMessage(res, '创建充值订单失败')
+        setMsg({ type: 'err', text: errMsg })
+        trackEvent('profile_coin_recharge_error', { error: errMsg })
+        return
+      }
+      if (!res.data.paymentUrl) {
+        paymentWindow?.close()
+        setMsg({ type: 'err', text: '支付链接不可用，请稍后重试' })
+        return
+      }
+
+      setActiveRecharge(res.data)
+      localStorage.setItem(ACTIVE_RECHARGE_KEY, res.data.orderId)
+      if (paymentWindow) {
+        paymentWindow.location.replace(res.data.paymentUrl)
+      } else {
+        setMsg({ type: 'ok', text: '订单已创建，请点击下方按钮前往支付' })
+      }
+      trackEvent('profile_coin_recharge_created', { amount: res.data.usdAmount, coins: res.data.coinAmount })
+    } catch {
+      paymentWindow?.close()
+      setMsg({ type: 'err', text: '创建充值订单失败' })
+    } finally {
+      setCreatingRecharge(false)
+    }
+  }
+
   const VIEW_TABS = [
     { key: 'balance', label: '余额' },
+    { key: 'recharge', label: '充值' },
     { key: 'redeem', label: '兑换' },
     { key: 'transfer', label: '转账' },
   ] as const
@@ -461,6 +567,98 @@ function CoinsTab({ user }: { user: UserInfo }) {
               </div>
               <button className="btn btn-primary" onClick={() => loadData()} style={{ marginTop: '1rem' }}>
                 刷新
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Recharge View */}
+      {viewTab === 'recharge' && (
+        <div className="coin-card">
+          <h3 className="section-title">OxaPay 加密货币充值</h3>
+          {activeRecharge ? (
+            <div className="recharge-order">
+              <div className={`recharge-status recharge-status--${activeRecharge.status.toLowerCase()}`}>
+                <span className="recharge-status-dot" />
+                <span>
+                  {activeRecharge.status === 'PAID'
+                    ? '已到账'
+                    : activeRecharge.status === 'CREATE_FAILED'
+                      ? '订单创建失败'
+                      : rechargeExpired ? '支付已过期' : '等待支付'}
+                </span>
+              </div>
+              <div className="recharge-details">
+                <InfoRow label="支付金额" value={`$${Number(activeRecharge.usdAmount).toFixed(2)} USD`} mono />
+                <InfoRow label="到账数量" value={`${activeRecharge.coinAmount.toLocaleString()} coins`} mono />
+                <InfoRow label="订单编号" value={activeRecharge.orderId} mono />
+                {activeRecharge.expiredAt && (
+                  <InfoRow label="有效期至" value={new Date(activeRecharge.expiredAt).toLocaleString('zh-CN')} />
+                )}
+              </div>
+              <div className="recharge-actions">
+                {activeRecharge.status === 'PENDING' && !rechargeExpired && activeRecharge.paymentUrl && (
+                  <a className="btn btn-primary" href={activeRecharge.paymentUrl} target="_blank" rel="noreferrer">
+                    前往支付
+                  </a>
+                )}
+                {activeRecharge.status === 'PENDING' && !rechargeExpired && (
+                  <button className="btn btn-ghost" onClick={() => refreshRecharge(activeRecharge.orderId)} disabled={checkingRecharge}>
+                    {checkingRecharge ? <><span className="spinner" /> 查询中…</> : '刷新状态'}
+                  </button>
+                )}
+                {(activeRecharge.status !== 'PENDING' || rechargeExpired) && (
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      localStorage.removeItem(ACTIVE_RECHARGE_KEY)
+                      setActiveRecharge(null)
+                      setMsg(null)
+                    }}
+                  >
+                    新建充值
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="coin-form-group">
+                <label className="coin-label" htmlFor="recharge-amount">充值金额（USD）</label>
+                <div className="recharge-input-wrap">
+                  <span className="recharge-input-prefix">$</span>
+                  <input
+                    id="recharge-amount"
+                    type="number"
+                    inputMode="decimal"
+                    min="0.01"
+                    step="0.01"
+                    value={rechargeAmount}
+                    onChange={(e) => setRechargeAmount(e.target.value)}
+                    className="coin-input recharge-input"
+                    disabled={creatingRecharge}
+                  />
+                  <span className="recharge-input-unit">USD</span>
+                </div>
+              </div>
+              <div className="recharge-preview">
+                <div>
+                  <span className="recharge-preview-label">预计到账</span>
+                  <strong className="recharge-preview-value">
+                    {(rechargeCents * 65).toLocaleString()} <small>coins</small>
+                  </strong>
+                </div>
+                <div className="recharge-preview-cny">约 ¥{(rechargeCents * 0.065).toFixed(3)} CNY</div>
+              </div>
+              <p className="section-desc recharge-rate">固定汇率：1 USD = 6.5 CNY，1 CNY = 1,000 coins</p>
+              <button
+                className="btn btn-primary"
+                onClick={handleRecharge}
+                disabled={creatingRecharge || rechargeCents < 1}
+                style={{ marginTop: '0.9rem' }}
+              >
+                {creatingRecharge ? <><span className="spinner" /> 创建订单中…</> : '创建支付订单'}
               </button>
             </>
           )}

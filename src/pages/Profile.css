@@ -444,6 +444,94 @@
   margin-top: 0.35rem;
 }
 
+/* Recharge */
+.recharge-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.recharge-input {
+  padding-left: 2rem;
+  padding-right: 3.6rem;
+  font-family: var(--font-mono);
+}
+
+.recharge-input-prefix,
+.recharge-input-unit {
+  position: absolute;
+  z-index: 1;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+.recharge-input-prefix { left: 0.85rem; }
+.recharge-input-unit { right: 0.85rem; font-size: 0.72rem; font-weight: 700; }
+
+.recharge-preview {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.recharge-preview-label {
+  display: block;
+  color: var(--text-3);
+  font-size: 0.72rem;
+  margin-bottom: 0.15rem;
+}
+
+.recharge-preview-value {
+  display: block;
+  color: var(--success);
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.recharge-preview-value small { font-size: 0.72rem; color: var(--text-3); }
+.recharge-preview-cny { color: var(--text-3); font-size: 0.78rem; white-space: nowrap; }
+.recharge-rate { margin-top: 0.65rem; }
+
+.recharge-order {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.recharge-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--warn);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.recharge-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  flex-shrink: 0;
+}
+
+.recharge-status--paid { color: var(--success); }
+.recharge-status--create_failed { color: var(--danger); }
+.recharge-details { display: flex; flex-direction: column; gap: 0.5rem; }
+.recharge-details .info-value { overflow-wrap: anywhere; }
+.recharge-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+@media (max-width: 520px) {
+  .recharge-preview { align-items: flex-start; flex-direction: column; gap: 0.35rem; }
+  .recharge-actions .btn { flex: 1; justify-content: center; }
+}
+
 /* Transaction List */
 .transaction-list {
   display: flex;
