@@ -11,6 +11,7 @@ import Activate from '@/pages/Activate'
 import OAuthCallback from '@/pages/OAuthCallback'
 import Profile from '@/pages/Profile'
 import Convert from '@/pages/Convert'
+import CookieConvert from '@/pages/CookieConvert'
 import UsedAlts from '@/pages/UsedAlts'
 import { checkSession, getUserInfo } from '@/api/user'
 import { useAuthStore } from '@/store/auth'
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/discord-callback" element={<OAuthCallback provider="discord" />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/convert" element={<Convert />} />
+          <Route path="/convert-cookie" element={<CookieConvert />} />
           <Route path="/used-alts" element={<UsedAlts />} />
           <Route path="*" element={
             <div className="page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>

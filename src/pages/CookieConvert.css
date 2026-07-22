@@ -1,0 +1,81 @@
+.cookie-convert-page {
+  padding-top: 1.3rem;
+  padding-bottom: 4rem;
+}
+
+.cookie-convert-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.1rem;
+  align-items: start;
+  margin-top: 1.75rem;
+}
+
+.cookie-convert-form-card,
+.cookie-convert-result-card {
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+}
+
+.cookie-convert-form-card .section-title,
+.cookie-convert-result-card .section-title {
+  margin-bottom: 1.25rem;
+}
+
+.cookie-convert-note {
+  margin-bottom: 0.9rem;
+  color: var(--text-3);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.cookie-convert-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 0.75rem;
+}
+
+.cookie-convert-empty,
+.cookie-convert-processing {
+  display: flex;
+  min-height: 12rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.cookie-convert-processing {
+  gap: 0.6rem;
+}
+
+.cookie-convert-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.cookie-convert-output {
+  max-height: 23rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--glass);
+  padding: 0.75rem 0.9rem;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 680px) {
+  .cookie-convert-layout {
+    grid-template-columns: 1fr;
+  }
+}

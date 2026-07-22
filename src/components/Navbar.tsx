@@ -28,6 +28,7 @@ export default function Navbar() {
     const items = [{ to: '/', label: '获取账号', active: isActive(location.pathname, '/') }]
     if (user) {
       items.push({ to: '/convert', label: 'SAuth转换', active: isActive(location.pathname, '/convert') })
+      items.push({ to: '/convert-cookie', label: 'Cookie转换', active: isActive(location.pathname, '/convert-cookie') })
       items.push({ to: '/used-alts', label: '使用记录', active: isActive(location.pathname, '/used-alts') })
       items.push({ to: '/profile', label: '个人中心', active: isActive(location.pathname, '/profile') })
     }
