@@ -288,6 +288,20 @@ function ApiKeyTab() {
         <pre className="mono">{`GET /api/alt/convert/sauth?username={4399用户名}&password={密码}\nAuthorization: Ciallo {你的 API Key}\n\nGET /api/alt/convert/gen\nAuthorization: Ciallo {你的 API Key}`}</pre>
       </div>
       <p className="section-desc"><code className="mono">convert/sauth</code> 将指定账号密码转换为 SAuth Token，返回 <code className="mono">data</code> 为 Token 字符串。<code className="mono">convert/gen</code> 获取一个账号并自动转换，返回 <code className="mono">{"{ username, password, sauth }"}</code>。</p>
+
+      <hr className="divider" />
+      <h4 className="section-subtitle">使用说明 — Cookie 转换</h4>
+      <div className="code-block">
+        <pre className="mono">{`POST /api/alt/convert/cookie
+Authorization: Ciallo {你的 API Key}
+Content-Type: application/json
+
+{
+  "account": "账号",
+  "password": "密码"
+}`}</pre>
+      </div>
+      <p className="section-desc">每次成功转换消耗 1 coin。成功时 <code className="mono">data</code> 为 Netscape 格式 Cookie 字符串；失败时通过 <code className="mono">message</code> 返回错误信息。</p>
     </motion.div>
   )
 }
