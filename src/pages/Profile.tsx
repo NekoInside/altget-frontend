@@ -16,6 +16,12 @@ import './Profile.css'
 const CAPTCHA_ID = '9589c1ac7f7819298973eabdd6365fcf'
 const ACTIVE_RECHARGE_KEY = 'altget.activeRechargeOrder'
 
+const formatRechargeCountdown = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0')
+  const seconds = (totalSeconds % 60).toString().padStart(2, '0')
+  return `${minutes}:${seconds}`
+}
+
 type UserInfoDef = UserInfo
 
 export default function Profile() {
@@ -335,6 +341,7 @@ function CoinsTab({ user }: { user: UserInfo }) {
   const [activeRecharge, setActiveRecharge] = useState<OxaPayRecharge | null>(null)
   const [creatingRecharge, setCreatingRecharge] = useState(false)
   const [checkingRecharge, setCheckingRecharge] = useState(false)
+  const [rechargeNow, setRechargeNow] = useState(() => Date.now())
   const settledRechargeIds = useRef(new Set<string>())
 
   // View Tab
@@ -391,16 +398,28 @@ function CoinsTab({ user }: { user: UserInfo }) {
   useEffect(() => {
     if (!activeRecharge || activeRecharge.status !== 'PENDING') return
     const expiredAt = activeRecharge.expiredAt ? new Date(activeRecharge.expiredAt).getTime() : null
-    if (expiredAt !== null && expiredAt <= Date.now()) return
 
-    const timer = window.setInterval(() => {
-      if (expiredAt !== null && expiredAt <= Date.now()) {
-        window.clearInterval(timer)
-        setActiveRecharge(current => current ? { ...current } : current)
-        return
+    let expirationRefreshRequested = false
+    const updateRechargeClock = () => {
+      const now = Date.now()
+      setRechargeNow(now)
+
+      // Stop using the payment URL at expiry and ask the API for the
+      // authoritative status once the countdown reaches zero.
+      if (expiredAt !== null && expiredAt <= now && !expirationRefreshRequested) {
+        expirationRefreshRequested = true
+        void refreshRecharge(activeRecharge.orderId, false)
       }
-      void refreshRecharge(activeRecharge.orderId, false)
-    }, 4_000)
+    }
+
+    updateRechargeClock()
+    const timer = window.setInterval(
+      expiredAt === null ? () => {
+        setRechargeNow(Date.now())
+        void refreshRecharge(activeRecharge.orderId, false)
+      } : updateRechargeClock,
+      expiredAt === null ? 4_000 : 1_000,
+    )
     return () => window.clearInterval(timer)
   }, [activeRecharge?.orderId, activeRecharge?.status, activeRecharge?.expiredAt])
 
@@ -489,7 +508,13 @@ function CoinsTab({ user }: { user: UserInfo }) {
   const rechargeCents = /^\d+(?:\.\d{1,2})?$/.test(rechargeAmount)
     ? Math.round(Number(rechargeAmount) * 100)
     : 0
-  const rechargeExpired = !!activeRecharge?.expiredAt && new Date(activeRecharge.expiredAt).getTime() <= Date.now()
+  const rechargeExpired = activeRecharge?.status === 'EXPIRED'
+    || (activeRecharge?.status === 'PENDING'
+      && !!activeRecharge.expiredAt
+      && new Date(activeRecharge.expiredAt).getTime() <= rechargeNow)
+  const rechargeRemainingSeconds = activeRecharge?.status === 'PENDING' && activeRecharge.expiredAt
+    ? Math.max(0, Math.ceil((new Date(activeRecharge.expiredAt).getTime() - rechargeNow) / 1000))
+    : null
 
   const handleRecharge = async () => {
     if (!Number.isSafeInteger(rechargeCents) || rechargeCents < 1) {
@@ -512,7 +537,7 @@ function CoinsTab({ user }: { user: UserInfo }) {
         trackEvent('profile_coin_recharge_error', { error: errMsg })
         return
       }
-      if (!res.data.paymentUrl) {
+      if (res.data.status !== 'CREATE_FAILED' && !res.data.paymentUrl) {
         paymentWindow?.close()
         setMsg({ type: 'err', text: '支付链接不可用，请稍后重试' })
         return
@@ -520,8 +545,14 @@ function CoinsTab({ user }: { user: UserInfo }) {
 
       setActiveRecharge(res.data)
       localStorage.setItem(ACTIVE_RECHARGE_KEY, res.data.orderId)
+      if (res.data.status === 'CREATE_FAILED') {
+        paymentWindow?.close()
+        setMsg({ type: 'err', text: 'OxaPay 发票创建失败，请重新发起充值' })
+        trackEvent('profile_coin_recharge_error', { error: 'CREATE_FAILED' })
+        return
+      }
       if (paymentWindow) {
-        paymentWindow.location.replace(res.data.paymentUrl)
+        if (res.data.paymentUrl) paymentWindow.location.replace(res.data.paymentUrl)
       } else {
         setMsg({ type: 'ok', text: '订单已创建，请点击下方按钮前往支付' })
       }
@@ -540,6 +571,32 @@ function CoinsTab({ user }: { user: UserInfo }) {
     { key: 'redeem', label: '兑换' },
     { key: 'transfer', label: '转账' },
   ] as const
+
+  const rechargeStatusText = activeRecharge?.status === 'PAID'
+    ? '充值成功'
+    : activeRecharge?.status === 'PAID_AFTER_EXPIRATION'
+      ? '支付已收到，等待人工处理'
+      : activeRecharge?.status === 'EXPIRED'
+        ? '支付已过期'
+        : activeRecharge?.status === 'CREATE_FAILED'
+          ? '订单创建失败'
+          : rechargeExpired
+            ? '正在确认订单状态'
+            : '等待支付'
+
+  const rechargeStatusNote = activeRecharge?.status === 'PAID'
+    ? '充值金额已到账。'
+    : activeRecharge?.status === 'PAID_AFTER_EXPIRATION'
+      ? '支付回调已收到，但余额不会自动增加。请联系客服或等待管理员人工补单。'
+      : activeRecharge?.status === 'EXPIRED'
+        ? '当前支付链接已失效，请重新创建充值订单。'
+        : activeRecharge?.status === 'CREATE_FAILED'
+          ? 'OxaPay 发票创建失败，请重新发起充值。'
+          : rechargeExpired
+            ? '支付时间已结束，正在从服务端确认订单是否已过期。'
+            : rechargeRemainingSeconds !== null
+              ? `请在 ${formatRechargeCountdown(rechargeRemainingSeconds)} 内完成支付，倒计时结束后将刷新订单状态。`
+              : '请完成支付，页面会自动刷新订单状态。'
 
   return (
     <motion.div className="tab-pane" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -595,20 +652,21 @@ function CoinsTab({ user }: { user: UserInfo }) {
             <div className="recharge-order">
               <div className={`recharge-status recharge-status--${activeRecharge.status.toLowerCase()}`}>
                 <span className="recharge-status-dot" />
-                <span>
-                  {activeRecharge.status === 'PAID'
-                    ? '已到账'
-                    : activeRecharge.status === 'CREATE_FAILED'
-                      ? '订单创建失败'
-                      : rechargeExpired ? '支付已过期' : '等待支付'}
-                </span>
+                <span aria-live="polite">{rechargeStatusText}</span>
               </div>
+              <p className="recharge-status-note">{rechargeStatusNote}</p>
               <div className="recharge-details">
                 <InfoRow label="支付金额" value={`$${Number(activeRecharge.usdAmount).toFixed(2)} USD`} mono />
                 <InfoRow label="到账数量" value={`${activeRecharge.coinAmount.toLocaleString()} coins`} mono />
                 <InfoRow label="订单编号" value={activeRecharge.orderId} mono />
+                {activeRecharge.trackId && (
+                  <InfoRow label="支付凭证" value={activeRecharge.trackId} mono />
+                )}
                 {activeRecharge.expiredAt && (
                   <InfoRow label="有效期至" value={new Date(activeRecharge.expiredAt).toLocaleString('zh-CN')} />
+                )}
+                {activeRecharge.paidAt && (
+                  <InfoRow label="支付时间" value={new Date(activeRecharge.paidAt).toLocaleString('zh-CN')} />
                 )}
               </div>
               <div className="recharge-actions">
@@ -622,7 +680,9 @@ function CoinsTab({ user }: { user: UserInfo }) {
                     {checkingRecharge ? <><span className="spinner" /> 查询中…</> : '刷新状态'}
                   </button>
                 )}
-                {(activeRecharge.status !== 'PENDING' || rechargeExpired) && (
+                {(activeRecharge.status === 'EXPIRED'
+                  || activeRecharge.status === 'CREATE_FAILED'
+                  || activeRecharge.status === 'PAID') && (
                   <button
                     className="btn btn-ghost"
                     onClick={() => {

@@ -32,7 +32,12 @@ export interface CoinBalance {
   balance: number
 }
 
-export type OxaPayRechargeStatus = 'PENDING' | 'CREATE_FAILED' | 'PAID'
+export type OxaPayRechargeStatus =
+  | 'PENDING'
+  | 'CREATE_FAILED'
+  | 'EXPIRED'
+  | 'PAID_AFTER_EXPIRATION'
+  | 'PAID'
 
 export interface OxaPayRecharge {
   orderId: string

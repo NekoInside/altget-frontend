@@ -523,6 +523,14 @@
 
 .recharge-status--paid { color: var(--success); }
 .recharge-status--create_failed { color: var(--danger); }
+.recharge-status--expired { color: var(--danger); }
+.recharge-status--paid_after_expiration { color: var(--warn); }
+.recharge-status-note {
+  color: var(--text-2);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  margin-top: -0.25rem;
+}
 .recharge-details { display: flex; flex-direction: column; gap: 0.5rem; }
 .recharge-details .info-value { overflow-wrap: anywhere; }
 .recharge-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
